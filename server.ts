@@ -1,6 +1,5 @@
 import express from 'express';
 import path from 'path';
-import { createServer as createViteServer } from 'vite';
 import fs from 'fs';
 import multer from 'multer';
 import jwt from 'jsonwebtoken';
@@ -300,11 +299,13 @@ app.use(express.json());
 
   // --- Vite Middleware (Local Only) ---
   if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
-    createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    }).then(vite => {
-      app.use(vite.middlewares);
+    import('vite').then(({ createServer }) => {
+      createServer({
+        server: { middlewareMode: true },
+        appType: 'spa',
+      }).then(vite => {
+        app.use(vite.middlewares);
+      });
     });
   } else {
     const distPath = path.join(process.cwd(), 'dist');
