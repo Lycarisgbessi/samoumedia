@@ -1,0 +1,80 @@
+[
+  {
+    "id": "national",
+    "name": "Nationales",
+    "isActive": true,
+    "order": 1
+  },
+  {
+    "id": "societe",
+    "name": "Société",
+    "isActive": true,
+    "order": 3
+  },
+  {
+    "id": "economie",
+    "name": "Économie",
+    "isActive": true,
+    "order": 4
+  },
+  {
+    "id": "justice",
+    "name": "Justice",
+    "isActive": true,
+    "order": 5
+  },
+  {
+    "id": "mines",
+    "name": "Mines",
+    "isActive": true,
+    "order": 6
+  },
+  {
+    "id": "culture",
+    "name": "Culture",
+    "isActive": true,
+    "order": 7
+  },
+  {
+    "id": "sport",
+    "name": "Sport",
+    "isActive": true,
+    "order": 8
+  },
+  {
+    "id": "education",
+    "name": "Éducation",
+    "isActive": true,
+    "order": 9
+  },
+  {
+    "id": "sante",
+    "name": "Santé",
+    "isActive": true,
+    "order": 10
+  },
+  {
+    "id": "environnement",
+    "name": "Environnement",
+    "isActive": true,
+    "order": 11
+  },
+  {
+    "id": "samou-benty",
+    "name": "Samou Benty",
+    "isActive": true,
+    "order": 12
+  },
+  {
+    "id": "forecariah",
+    "name": "Forecariah",
+    "isActive": true,
+    "order": 13
+  },
+  {
+    "id": "international",
+    "name": "International",
+    "isActive": true,
+    "order": 14
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "1",
+    "name": "Header Ad",
+    "format": "horizontal",
+    "location": "home_top",
+    "isActive": true,
+    "imageUrl": "https://picsum.photos/seed/ad_header/728/90",
+    "targetUrl": "#"
+  },
+  {
+    "id": "2",
+    "name": "Sidebar Ad",
+    "format": "vertical",
+    "location": "sidebar",
+    "isActive": true,
+    "imageUrl": "https://picsum.photos/seed/ad_sidebar/300/600",
+    "targetUrl": "#"
+  },
+  {
+    "id": "3",
+    "name": "Article In-content",
+    "format": "in-article",
+    "location": "article_middle",
+    "isActive": true,
+    "imageUrl": "https://picsum.photos/seed/ad_inarticle/728/90",
+    "targetUrl": "#"
+  },
+  {
+    "id": "4",
+    "name": "Popup Ad",
+    "format": "popup",
+    "location": "popup",
+    "isActive": true,
+    "imageUrl": "https://picsum.photos/seed/ad_popup/400/300",
+    "targetUrl": "#"
+  }
+]

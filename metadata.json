@@ -1,0 +1,6 @@
+{
+  "name": "SAMOU MEDIA",
+  "description": "Informer. Éclairer. Rassembler. La voix de Samou, le regard sur le monde.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

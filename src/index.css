@@ -1,0 +1,23 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Roboto", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Roboto", ui-sans-serif, system-ui, sans-serif; /* Fallback to sans for mockup fidelity */
+
+  --color-brand-red: #E30613;
+  --color-brand-yellow: #FFD100;
+  --color-brand-green: #007A33;
+  --color-brand-dark: #000000;
+  --color-brand-blue: #0A369D; /* For the ad space and blue badges */
+}
+
+@layer base {
+  body {
+    @apply font-sans bg-white text-gray-900 antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-sans font-bold tracking-tight text-brand-dark;
+  }
+}
