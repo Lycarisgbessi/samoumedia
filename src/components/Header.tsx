@@ -102,10 +102,9 @@ export default function Header() {
             <Home size={20} className="text-white" />
           </Link>
 
-          {/* Desktop Categories */}
           <div className="hidden lg:flex items-center flex-1 overflow-x-auto overflow-y-hidden hide-scrollbar px-2">
             {activeCategories.map(cat => (
-              <NavLink key={cat.id} to={`/category/${cat.id}`}>
+              <NavLink key={cat.id} to={`/rubriques/${cat.id}`}>
                 {cat.name}
               </NavLink>
             ))}
@@ -124,7 +123,7 @@ export default function Header() {
                   {activeCategories.map(cat => (
                     <Link 
                       key={cat.id}
-                      to={`/category/${cat.id}`} 
+                      to={`/rubriques/${cat.id}`} 
                       className="py-3 px-6 text-sm font-bold uppercase text-white hover:text-brand-yellow border-b border-gray-800"
                     >
                       {cat.name}
