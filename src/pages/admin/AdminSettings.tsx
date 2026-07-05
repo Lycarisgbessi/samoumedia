@@ -12,6 +12,7 @@ export default function AdminSettings() {
     socials: {}
   });
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -26,6 +27,7 @@ export default function AdminSettings() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage('');
+    setSaving(true);
     try {
       await authFetch('/api/config', {
         method: 'PUT',
@@ -36,6 +38,8 @@ export default function AdminSettings() {
       setTimeout(() => setMessage(''), 3000);
     } catch (error) {
       setMessage('Erreur lors de l\'enregistrement.');
+    } finally {
+      setSaving(false);
     }
   };
 
