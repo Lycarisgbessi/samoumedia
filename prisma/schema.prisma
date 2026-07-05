@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id       String    @id
+  name     String
+  isActive Boolean   @default(true)
+  order    Int       @default(0)
+  articles Article[]
+}
+
+model Article {
+  id         String   @id
+  title      String
+  excerpt    String?
+  content    String
+  imageUrl   String?
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+  author     String
+  date       DateTime @default(now())
+  readTime   String?
+  isFeatured Boolean  @default(false)
+  views      Int      @default(0)
+}
+
+model SiteConfig {
+  id      Int      @id @default(1)
+  name    String
+  slogan  String?
+  address String?
+  phone   String?
+  emails  String[]
+  socials Json?
+}
+
+model AdSpace {
+  id        String  @id
+  name      String
+  format    String
+  location  String
+  isActive  Boolean @default(true)
+  imageUrl  String?
+  targetUrl String?
+}
+
+model Chronique {
+  id          String   @id
+  title       String
+  author      String
+  authorRole  String?
+  authorImage String?
+  date        DateTime @default(now())
+  excerpt     String?
+}
