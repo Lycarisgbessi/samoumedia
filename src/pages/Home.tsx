@@ -14,6 +14,25 @@ export default function Home() {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
 
+  const getYouTubeId = (url?: string | null) => {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  const getImageUrl = (article: any) => {
+    if (article?.imageUrl) return article.imageUrl;
+    const ytId = getYouTubeId(article?.videoUrl);
+    if (ytId) return `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
+    return "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Crect fill='%23f3f4f6' width='800' height='600'/%3E%3Ctext fill='%239ca3af' font-family='sans-serif' font-size='30' dy='10.5' font-weight='bold' x='50%25' y='50%25' text-anchor='middle'%3ESAMOU MEDIA%3C/text%3E%3C/svg%3E";
+  };
+
+  const onImageError = (e: any) => {
+    e.currentTarget.onerror = null;
+    e.currentTarget.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Crect fill='%23f3f4f6' width='800' height='600'/%3E%3Ctext fill='%239ca3af' font-family='sans-serif' font-size='30' dy='10.5' font-weight='bold' x='50%25' y='50%25' text-anchor='middle'%3ESAMOU MEDIA%3C/text%3E%3C/svg%3E";
+  };
+
   const getCategoryName = (id: string) => categories.find(c => c.id === id)?.name || id;
 
   const featuredArticles = articles.filter(a => a.isFeatured);
@@ -24,13 +43,7 @@ export default function Home() {
   const mostRead = [...articles].sort((a, b) => b.views - a.views).slice(0, 5);
   const samouBentyArticles = articles.filter(a => a.categoryId === 'samou-benty').slice(0, 4);
   
-  const gallery = [
-    "https://picsum.photos/seed/samou15/800/600",
-    "https://picsum.photos/seed/samou16/800/600",
-    "https://picsum.photos/seed/samou17/800/600",
-    "https://picsum.photos/seed/samou18/800/600",
-    "https://picsum.photos/seed/samou19/800/600",
-  ];
+  
 
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
@@ -41,7 +54,7 @@ export default function Home() {
         {mainFeatured && (
           <div className="lg:col-span-8 relative group overflow-hidden">
             <Link to={`/article/${mainFeatured.slug}`} className="block w-full h-[400px] md:h-[500px]">
-              <img src={mainFeatured.imageUrl} alt={mainFeatured.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+              <img src={getImageUrl(mainFeatured)} onError={onImageError} alt={mainFeatured.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
                 <span className="bg-brand-red text-white text-xs font-bold uppercase px-3 py-1 mb-4 inline-block">
@@ -73,7 +86,7 @@ export default function Home() {
           {subFeatured.map((article) => (
             <Link to={`/article/${article.slug}`} key={article.id} className="flex gap-4 group mb-4 last:mb-0 bg-gray-50 hover:bg-gray-100 transition-colors">
               <div className="w-1/3 aspect-[4/3] shrink-0 overflow-hidden">
-                <img src={article.imageUrl} alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                <img src={getImageUrl(article)} onError={onImageError} alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
               </div>
               <div className="flex flex-col py-1 pr-2 w-2/3">
                 <span className="text-[10px] font-bold text-brand-red uppercase mb-1">
@@ -117,7 +130,7 @@ export default function Home() {
             {latestArticles.map((article) => (
               <Link to={`/article/${article.slug}`} key={article.id} className="group">
                 <div className="relative aspect-[4/3] mb-3 overflow-hidden">
-                  <img src={article.imageUrl} alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  <img src={getImageUrl(article)} onError={onImageError} alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                   <div className="absolute bottom-0 left-0 bg-brand-blue text-white text-[10px] font-bold uppercase px-2 py-0.5">
                     {getCategoryName(article.categoryId)}
                   </div>
@@ -169,7 +182,7 @@ export default function Home() {
               {samouBentyArticles.map((article) => (
                 <Link to={`/article/${article.slug}`} key={article.id} className="group">
                   <div className="aspect-[4/3] overflow-hidden mb-2">
-                    <img src={article.imageUrl} alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    <img src={getImageUrl(article)} onError={onImageError} alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                   </div>
                   <h3 className="font-bold text-xs leading-snug text-brand-dark group-hover:text-brand-green line-clamp-3">
                     {article.title}
@@ -195,7 +208,7 @@ export default function Home() {
           <div className="flex flex-col gap-4">
             {/* Main Video */}
             <div className="relative group cursor-pointer aspect-video bg-gray-900">
-              <img src={gallery[0]} alt="Video Thumbnail" className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity" />
+              <img src={"data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Crect fill='%23f3f4f6' width='800' height='600'/%3E%3Ctext fill='%239ca3af' font-family='sans-serif' font-size='30' dy='10.5' font-weight='bold' x='50%25' y='50%25' text-anchor='middle'%3ESAMOU MEDIA%3C/text%3E%3C/svg%3E"} alt="Video Thumbnail" className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity" />
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="w-12 h-12 bg-black/60 rounded-full flex items-center justify-center text-white border-2 border-white/80">
                   <Play size={24} className="ml-1 fill-white" />
@@ -209,7 +222,7 @@ export default function Home() {
             <div className="grid grid-cols-3 gap-2">
               {[1, 2, 3].map(i => (
                 <div key={i} className="relative group cursor-pointer aspect-video bg-gray-900">
-                  <img src={gallery[i]} alt="Mini Video" className="w-full h-full object-cover opacity-70 group-hover:opacity-100" />
+                  <img src={"data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Crect fill='%23f3f4f6' width='800' height='600'/%3E%3Ctext fill='%239ca3af' font-family='sans-serif' font-size='30' dy='10.5' font-weight='bold' x='50%25' y='50%25' text-anchor='middle'%3ESAMOU MEDIA%3C/text%3E%3C/svg%3E"} alt="Mini Video" className="w-full h-full object-cover opacity-70 group-hover:opacity-100" />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="w-6 h-6 bg-black/60 rounded-full flex items-center justify-center text-white border border-white/80">
                       <Play size={12} className="ml-0.5 fill-white" />
@@ -255,13 +268,13 @@ export default function Home() {
           </SectionRibbon>
           <div className="grid grid-cols-2 gap-2">
             <div className="col-span-1 row-span-2 relative group cursor-pointer overflow-hidden aspect-[1/2]">
-              <img src={gallery[2]} alt="Gallery Main" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+              <img src={"data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Crect fill='%23f3f4f6' width='800' height='600'/%3E%3Ctext fill='%239ca3af' font-family='sans-serif' font-size='30' dy='10.5' font-weight='bold' x='50%25' y='50%25' text-anchor='middle'%3ESAMOU MEDIA%3C/text%3E%3C/svg%3E"} alt="Gallery Main" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
             </div>
             <div className="col-span-1 relative group cursor-pointer overflow-hidden aspect-square">
-              <img src={gallery[3]} alt="Gallery 1" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+              <img src={"data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Crect fill='%23f3f4f6' width='800' height='600'/%3E%3Ctext fill='%239ca3af' font-family='sans-serif' font-size='30' dy='10.5' font-weight='bold' x='50%25' y='50%25' text-anchor='middle'%3ESAMOU MEDIA%3C/text%3E%3C/svg%3E"} alt="Gallery 1" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
             </div>
             <div className="col-span-1 relative group cursor-pointer overflow-hidden aspect-square">
-              <img src={gallery[4]} alt="Gallery 2" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+              <img src={"data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Crect fill='%23f3f4f6' width='800' height='600'/%3E%3Ctext fill='%239ca3af' font-family='sans-serif' font-size='30' dy='10.5' font-weight='bold' x='50%25' y='50%25' text-anchor='middle'%3ESAMOU MEDIA%3C/text%3E%3C/svg%3E"} alt="Gallery 2" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
             </div>
           </div>
         </div>
@@ -302,3 +315,6 @@ export default function Home() {
     </main>
   );
 }
+
+
+
