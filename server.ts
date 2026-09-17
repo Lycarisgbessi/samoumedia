@@ -163,9 +163,9 @@ app.post('/api/upload', authenticateToken, asyncHandler(async (req: any, res: an
       fs.writeFileSync(path.join(UPLOADS_DIR, filename), buffer);
       return res.json({ url: `/uploads/${filename}` });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Upload error:', error);
-    res.status(500).json({ error: 'Upload failed' });
+    res.status(500).json({ error: error.message || 'Upload failed', details: error });
   }
 }));
 

@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Edit2, Trash2, Plus, X, Search, Save, Power, CheckCircle, XCircle } from 'lucide-react';
 import { authFetch } from '../../lib/auth';
+import { compressImage } from '../../utils/imageCompression';
 
 export default function AdminAds() {
   const [ads, setAds] = useState<any[]>([]);
@@ -37,27 +38,23 @@ export default function AdminAds() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      try {
-        const base64Image = reader.result;
-        const res = await authFetch('/api/upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: base64Image })
-        });
-        const data = await res.json();
-        if (data.url) {
-          setCurrentAd(prev => ({...prev, imageUrl: data.url}));
-        } else {
-          alert('Erreur: ' + data.error);
-        }
-      } catch (error) {
-        console.error('Erreur lors de l\'upload:', error);
-        alert("Erreur lors du téléchargement de l'image");
+    try {
+      const base64Image = await compressImage(file, 1200, 0.8);
+      const res = await authFetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64Image })
+      });
+      const data = await res.json();
+      if (data.url) {
+        setCurrentAd(prev => ({...prev, imageUrl: data.url}));
+      } else {
+        alert('Erreur: ' + data.error);
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Erreur lors de l\'upload:', error);
+      alert("Erreur lors du téléchargement de l'image (l'image est peut-être trop lourde ou mal formatée)");
+    }
   };
 
   const handleToggleActive = async (ad: any) => {
