@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Settings, Layers, FileText, Image as ImageIcon, LogOut, Mic, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Settings, Layers, FileText, Image as ImageIcon, LogOut, Mic, Menu, X, Images } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useEffect, useState, type MouseEvent } from 'react';
 import { getToken, removeToken } from '../../lib/auth';
@@ -26,6 +26,7 @@ export default function AdminLayout() {
     { name: 'Catégories', path: '/admin/categories', icon: Layers },
     { name: 'Articles', path: '/admin/articles', icon: FileText },
     { name: 'Chroniques', path: '/admin/chroniques', icon: Mic },
+    { name: 'Galerie Photos', path: '/admin/photos', icon: Images },
     { name: 'Publicités', path: '/admin/ads', icon: ImageIcon },
   ];
 

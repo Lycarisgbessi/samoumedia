@@ -10,7 +10,7 @@ import { AdSpace } from '../components/AdSpace';
 import DOMPurify from 'dompurify';
 import { useCategories } from '../lib/hooks';
 import { normalizeArticle } from '../lib/text';
-import { FALLBACK_IMAGE, getYouTubeId, onImageError } from '../lib/media';
+import { FALLBACK_IMAGE, getYouTubeId, getYouTubeThumb, onImageError } from '../lib/media';
 
 export default function ArticleView() {
   const { slug } = useParams<{ slug: string }>();
@@ -69,7 +69,7 @@ export default function ArticleView() {
       <div className="relative h-[60vh] md:h-[70vh] w-full overflow-hidden bg-brand-dark">
         <motion.div style={{ y, opacity }} className="absolute inset-0 origin-top">
           <img onError={onImageError}
-            src={article.imageUrl || (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg` : FALLBACK_IMAGE)}
+            src={article.imageUrl || getYouTubeThumb(article.videoUrl) || FALLBACK_IMAGE}
             alt={article.title}
             className="w-full h-full object-cover opacity-60"
           />
@@ -140,15 +140,22 @@ export default function ArticleView() {
 
         <Reveal delay={0.4}>
           {youtubeId && (
-            <div className="mb-12 relative w-full rounded-2xl overflow-hidden shadow-2xl bg-black" style={{ paddingTop: '56.25%' }}>
-              <iframe
-                src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1`}
-                title="YouTube video player"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="absolute top-0 left-0 w-full h-full"
-              ></iframe>
-            </div>
+            <figure className="mb-12 w-full">
+              <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl bg-black" style={{ paddingTop: '56.25%' }}>
+                <iframe
+                  src={`https://www.youtube.com/embed/${youtubeId}`}
+                  title={`Vidéo : ${article.title}`}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  className="absolute top-0 left-0 w-full h-full border-0"
+                ></iframe>
+              </div>
+              <figcaption className="mt-2 text-center text-xs font-bold uppercase tracking-widest text-gray-400 flex items-center justify-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-brand-red animate-pulse" />
+                Vidéo — SAMOU MÉDIA
+              </figcaption>
+            </figure>
           )}
 
           <div className="prose prose-base sm:prose-lg md:prose-xl prose-red max-w-none prose-p:leading-relaxed prose-p:text-gray-800 prose-headings:font-serif prose-headings:font-black">

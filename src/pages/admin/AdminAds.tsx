@@ -104,14 +104,15 @@ export default function AdminAds() {
               <input type="text" required value={currentAd.name || ''} onChange={e => setCurrentAd({...currentAd, name: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-700">Format</label>
-              <select required value={currentAd.format || 'horizontal'} onChange={e => setCurrentAd({...currentAd, format: e.target.value})} className="w-full px-4 py-2 border rounded-lg">
-                <option value="horizontal">Horizontal (Bannière)</option>
-                <option value="vertical">Vertical (Sidebar)</option>
-                <option value="square">Carré</option>
-                <option value="in-article">Dans l'article</option>
-                <option value="popup">Pop-up</option>
+              <label className="text-sm font-bold text-gray-700">Format et dimensions</label>
+              <select required value={currentAd.format || 'horizontal'} onChange={e => setCurrentAd({...currentAd, format: e.target.value})} className="w-full px-4 py-2 border rounded-lg bg-white">
+                <option value="horizontal">Horizontal — Bannière 728 × 90 px (recommandé)</option>
+                <option value="vertical">Vertical — Demi-page 300 × 600 px (recommandé)</option>
+                <option value="square">Carré — Pavé 300 × 250 px (recommandé)</option>
+                <option value="in-article">Dans l'article — Largeur fluide × 90-120 px</option>
+                <option value="popup">Pop-up flottant — 320 × 240 px (recommandé)</option>
               </select>
+              <p className="text-xs text-gray-400">Préparez votre image aux dimensions indiquées pour un rendu optimal (JPG ou PNG).</p>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-bold text-gray-700">Emplacement (où l'afficher en priorité)</label>

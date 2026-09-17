@@ -5,6 +5,7 @@ import type { Article } from '../types';
 import { motion } from 'motion/react';
 import { Key } from 'react';
 import { Play } from 'lucide-react';
+import { FALLBACK_IMAGE, getYouTubeThumb, onImageError } from '../lib/media';
 
 interface ArticleCardProps {
   article: Article;
@@ -70,10 +71,10 @@ export default function ArticleCard({ article, featured, categoryName, compact, 
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="w-full h-full"
         >
-          <motion.img 
-            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Crect fill='%23f3f4f6' width='800' height='600'/%3E%3Ctext fill='%239ca3af' font-family='sans-serif' font-size='30' dy='10.5' font-weight='bold' x='50%25' y='50%25' text-anchor='middle'%3ESAMOU MEDIA%3C/text%3E%3C/svg%3E"; }}
-            src={article.imageUrl || (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg` : '') || "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Crect fill='%23f3f4f6' width='800' height='600'/%3E%3Ctext fill='%239ca3af' font-family='sans-serif' font-size='30' dy='10.5' font-weight='bold' x='50%25' y='50%25' text-anchor='middle'%3ESAMOU MEDIA%3C/text%3E%3C/svg%3E"} 
-            alt={article.title} 
+          <motion.img
+            onError={onImageError}
+            src={article.imageUrl || getYouTubeThumb(article.videoUrl) || FALLBACK_IMAGE}
+            alt={article.title}
             className="w-full h-full object-cover"
             whileHover={{ scale: 1.05 }}
             transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}

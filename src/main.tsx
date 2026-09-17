@@ -22,6 +22,7 @@ import AdminArticles from './pages/admin/AdminArticles.tsx';
 import AdminAds from './pages/admin/AdminAds.tsx';
 import AdminLogin from './pages/admin/AdminLogin.tsx';
 import AdminChroniques from './pages/admin/AdminChroniques.tsx';
+import AdminPhotos from './pages/admin/AdminPhotos.tsx';
 
 import './index.css';
 
@@ -40,6 +41,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="articles" element={<AdminArticles />} />
           <Route path="chroniques" element={<AdminChroniques />} />
           <Route path="ads" element={<AdminAds />} />
+          <Route path="photos" element={<AdminPhotos />} />
         </Route>
 
         {/* Public App Routes */}

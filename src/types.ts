@@ -68,3 +68,12 @@ export interface Ad {
   imageUrl?: string | null;
   targetUrl?: string | null;
 }
+
+export interface Photo {
+  id: string;
+  imageUrl: string;
+  caption?: string | null;
+  order: number;
+  isActive: boolean;
+  createdAt: string;
+}

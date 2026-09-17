@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Ad, Article, Category, Chronique, SiteConfig } from '../types';
+import type { Ad, Article, Category, Chronique, Photo, SiteConfig } from '../types';
 import { normalizeArticle } from './text';
 
 export function useCategories() {
@@ -88,4 +88,19 @@ export function useChroniques() {
   }, []);
 
   return { chroniques, loading };
+}
+
+export function usePhotos() {
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/photos', { cache: 'no-store' })
+      .then(res => res.json())
+      .then((data: Photo[]) => setPhotos(Array.isArray(data) ? data : []))
+      .catch(() => setPhotos([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { photos, loading };
 }

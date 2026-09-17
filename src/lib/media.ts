@@ -16,7 +16,10 @@ export function getYouTubeId(url?: string | null): string | null {
 
 export function getYouTubeThumb(url?: string | null): string | null {
   const id = getYouTubeId(url);
-  return id ? `https://img.youtube.com/vi/${id}/maxresdefault.jpg` : null;
+  // hqdefault.jpg est garantie pour TOUTES les vidéos YouTube.
+  // (maxresdefault.jpg fait une 404 sur beaucoup de vidéos sans version HD,
+  //  ce qui cassait l'affichage des miniatures.)
+  return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null;
 }
 
 /** Image d'un article : image explicite > miniature YouTube > image de secours. */

@@ -411,9 +411,38 @@ app.put('/api/articles/:id/restore', authenticateToken, asyncHandler(async (req:
   res.json({ success: true });
 }));
 
+// Photos (galerie d'accueil)
+const photoSchema = z.object({
+  imageUrl: z.string().min(1),
+  caption: z.string().optional().nullable(),
+  order: z.number().int().optional().default(0),
+  isActive: z.boolean().optional().default(true)
+});
+
+app.get('/api/photos', asyncHandler(async (req: any, res: any) => {
+  const { all } = req.query;
+  const where: any = all === 'true' ? {} : { isActive: true };
+  res.json(await prisma.photo.findMany({ where, orderBy: [{ order: 'asc' }, { createdAt: 'desc' }] }));
+}));
+app.post('/api/photos', authenticateToken, asyncHandler(async (req: any, res: any) => {
+  const validData = photoSchema.parse(req.body);
+  const count = await prisma.photo.count();
+  res.json(await prisma.photo.create({ data: { ...validData, order: validData.order ?? count + 1 } }));
+}));
+app.put('/api/photos/:id', authenticateToken, asyncHandler(async (req: any, res: any) => {
+  const validData = photoSchema.partial().parse(req.body);
+  await prisma.photo.update({ where: { id: req.params.id }, data: validData });
+  res.json({ success: true });
+}));
+app.delete('/api/photos/:id', authenticateToken, asyncHandler(async (req: any, res: any) => {
+  const photo = await prisma.photo.findUnique({ where: { id: req.params.id } });
+  if (photo?.imageUrl) await deleteImageFile(photo.imageUrl);
+  await prisma.photo.delete({ where: { id: req.params.id } });
+  res.json({ success: true });
+}));
+
 // Subscribers
-app.post('/api/subscribe', asyncHandler(async (req: any, res: any) => {
-  const { email } = req.body;
+app.post('/api/subscribe', asyncHandler(async (req: any, res: any) => {  const { email } = req.body;
   if (!email || !email.includes('@')) return res.status(400).json({ error: 'Email invalide' });
   try {
     await prisma.subscriber.upsert({
