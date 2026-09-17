@@ -39,17 +39,36 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Quick Links */}
+        {/* Newsletter */}
         <div className="lg:col-span-2">
-          <h3 className="font-bold text-sm mb-6 text-brand-dark uppercase border-b-2 border-brand-red pb-2 inline-block">Liens Rapides</h3>
-          <ul className="space-y-3 text-sm text-gray-600 font-medium">
-            <li><Link to="/about" className="hover:text-brand-red transition-colors">À propos</Link></li>
-            <li><Link to="/equipe" className="hover:text-brand-red transition-colors">Notre équipe</Link></li>
-            <li><Link to="/partenaires" className="hover:text-brand-red transition-colors">Partenaires</Link></li>
-            <li><Link to="/mentions-legales" className="hover:text-brand-red transition-colors">Mentions légales</Link></li>
-            <li><Link to="/confidentialite" className="hover:text-brand-red transition-colors">Confidentialité</Link></li>
-            <li><Link to="/contact" className="hover:text-brand-red transition-colors">Contact</Link></li>
-          </ul>
+          <h3 className="font-bold text-sm mb-6 text-brand-dark uppercase border-b-2 border-brand-red pb-2 inline-block">Newsletter</h3>
+          <p className="text-xs text-gray-600 mb-4 leading-relaxed font-medium">Inscrivez-vous pour recevoir nos meilleurs reportages directement par e-mail.</p>
+          <form 
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const form = e.target as HTMLFormElement;
+              const email = (form.elements.namedItem('email') as HTMLInputElement).value;
+              try {
+                const res = await fetch('/api/subscribe', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email })
+                });
+                if (res.ok) {
+                  alert('Merci pour votre inscription !');
+                  form.reset();
+                } else {
+                  alert('Erreur lors de l\'inscription.');
+                }
+              } catch (err) {
+                alert('Erreur de connexion.');
+              }
+            }}
+            className="flex flex-col gap-2"
+          >
+            <input type="email" name="email" placeholder="Votre adresse e-mail" required className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:border-brand-red focus:outline-none" />
+            <button type="submit" className="w-full px-3 py-2 text-sm font-bold text-white bg-brand-red rounded hover:bg-red-700 transition-colors">S'abonner</button>
+          </form>
         </div>
 
         {/* Rubriques */}

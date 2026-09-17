@@ -93,27 +93,31 @@ export default function AdminCategories() {
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full text-left">
-          <thead className="bg-gray-50 border-b border-gray-100">
+          <thead className="bg-gray-50 border-b border-gray-100 hidden md:table-header-group">
             <tr>
               <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Nom</th>
               <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Statut</th>
               <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-100 block md:table-row-group">
             {categories.map((cat) => (
-              <tr key={cat.id} className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-6 py-4 font-medium text-gray-900">{cat.name}</td>
-                <td className="px-6 py-4">
+              <tr key={cat.id} className="hover:bg-gray-50/50 transition-colors block md:table-row border-b md:border-b-0 p-4 md:p-0">
+                <td className="md:px-6 md:py-4 font-medium text-gray-900 block md:table-cell mb-2 md:mb-0">
+                  <div className="md:hidden text-xs text-gray-400 font-bold uppercase mb-1">Nom</div>
+                  {cat.name}
+                </td>
+                <td className="md:px-6 md:py-4 block md:table-cell mb-4 md:mb-0">
+                  <div className="md:hidden text-xs text-gray-400 font-bold uppercase mb-1">Statut</div>
                   <button onClick={() => handleToggleActive(cat)} className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full w-max ${cat.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                     {cat.isActive ? <CheckCircle size={14} /> : <XCircle size={14} />}
                     {cat.isActive ? 'Actif' : 'Inactif'}
                   </button>
                 </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-2">
-                    <button onClick={() => handleEdit(cat)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit2 size={18} /></button>
-                    <button onClick={() => handleDelete(cat.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={18} /></button>
+                <td className="md:px-6 md:py-4 text-left md:text-right block md:table-cell">
+                  <div className="flex justify-end gap-2 bg-gray-50 md:bg-transparent -mx-4 -mb-4 p-4 md:m-0 md:p-0 border-t md:border-none">
+                    <button onClick={() => handleEdit(cat)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors bg-white md:bg-transparent shadow-sm md:shadow-none"><Edit2 size={18} /></button>
+                    <button onClick={() => handleDelete(cat.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors bg-white md:bg-transparent shadow-sm md:shadow-none"><Trash2 size={18} /></button>
                   </div>
                 </td>
               </tr>

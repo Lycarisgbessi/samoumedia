@@ -1,16 +1,16 @@
 import { useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import type { Article } from '../types';
-import { articles as mockArticles } from '../lib/mockData'; // à supprimer
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Reveal } from '../components/Reveal';
 import { motion, useScroll, useTransform } from 'motion/react';
 import { Calendar, Clock, Share2 } from 'lucide-react';
 import { AdSpace } from '../components/AdSpace';
+import DOMPurify from 'dompurify';
 
 export default function ArticleView() {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
   const { scrollY } = useScroll();
@@ -18,7 +18,7 @@ export default function ArticleView() {
   const opacity = useTransform(scrollY, [0, 300], [1, 0]);
 
   useEffect(() => {
-    fetch(`/api/articles/${id}`, { cache: 'no-store' })
+    fetch(`/api/articles/slug/${slug}`, { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         if (!data.error) {
@@ -27,10 +27,18 @@ export default function ArticleView() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [id]);
+  }, [slug]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-brand-dark font-mono text-sm tracking-widest uppercase">Chargement en cours...</div>;
   if (!article) return <div className="min-h-screen flex items-center justify-center text-brand-red font-mono text-sm tracking-widest uppercase">Article introuvable.</div>;
+  const getYouTubeId = (url?: string) => {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  const youtubeId = getYouTubeId(article.videoUrl);
 
   return (
     <article className="min-h-screen bg-white">
@@ -38,7 +46,7 @@ export default function ArticleView() {
       <div className="relative h-[60vh] md:h-[70vh] w-full overflow-hidden bg-brand-dark">
         <motion.div style={{ y, opacity }} className="absolute inset-0 origin-top">
           <img onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Crect fill='%23f3f4f6' width='800' height='600'/%3E%3Ctext fill='%239ca3af' font-family='sans-serif' font-size='30' dy='10.5' font-weight='bold' x='50%25' y='50%25' text-anchor='middle'%3ESAMOU MEDIA%3C/text%3E%3C/svg%3E"; }} 
-            src={article.imageUrl} 
+            src={article.imageUrl || (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg` : '')} 
             alt={article.title} 
             className="w-full h-full object-cover opacity-60"
           />
@@ -49,7 +57,8 @@ export default function ArticleView() {
           <div className="max-w-4xl mx-auto">
             <Reveal>
               <div className="flex flex-wrap items-center gap-4 mb-6">
-                <span className="bg-brand-red text-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] rounded-sm shadow-lg">
+                <span className="bg-brand-red text-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] rounded-sm shadow-lg flex items-center gap-2">
+                  {youtubeId && <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>}
                   {article.categoryId}
                 </span>
                 <span className="text-gray-300 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
@@ -101,18 +110,40 @@ export default function ArticleView() {
         </Reveal>
 
         <Reveal delay={0.4}>
+          {youtubeId && (
+            <div className="mb-12 relative w-full rounded-2xl overflow-hidden shadow-2xl bg-black" style={{ paddingTop: '56.25%' }}>
+              <iframe
+                src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1`}
+                title="YouTube video player"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="absolute top-0 left-0 w-full h-full"
+              ></iframe>
+            </div>
+          )}
+
           <div className="prose prose-lg md:prose-xl prose-red max-w-none prose-p:leading-relaxed prose-p:text-gray-800 prose-headings:font-serif prose-headings:font-black">
             <div 
               className="whitespace-pre-wrap font-serif text-2xl leading-relaxed text-gray-800 mb-8 first-letter:text-7xl first-letter:font-black first-letter:text-brand-red first-letter:mr-3 first-letter:float-left first-letter:leading-none"
-              dangerouslySetInnerHTML={{ __html: article.content }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(article.content) }}
             />
+
+            {article.tags && article.tags.length > 0 && (
+              <div className="mt-12 pt-8 border-t border-gray-100 flex flex-wrap gap-2">
+                <span className="font-bold text-gray-500 mr-2 flex items-center">Tags :</span>
+                {article.tags.map(tag => (
+                  <a 
+                    href={`/?tag=${tag}`}
+                    key={tag} 
+                    className="px-4 py-1.5 bg-gray-100 hover:bg-brand-red hover:text-white text-gray-700 text-xs font-bold uppercase tracking-wider rounded-full transition-colors cursor-pointer"
+                  >
+                    #{tag}
+                  </a>
+                ))}
+              </div>
+            )}
             
             <AdSpace format="in-article" className="rounded-xl" />
-
-            <p className="whitespace-pre-wrap text-gray-800 leading-relaxed mt-8 font-medium">
-              {/* Mock extra content for better visual presentation */}
-              Ce reportage s'inscrit dans notre volonté continue de mettre en lumière les réalités du terrain. Les témoignages recueillis démontrent une résilience extraordinaire de la population face aux défis quotidiens. Nous continuerons à suivre de près l'évolution de cette situation dans nos prochaines éditions.
-            </p>
             <div className="mt-16 border-t border-gray-100 pt-12">
               <AdSpace format="horizontal" className="rounded-xl" />
             </div>

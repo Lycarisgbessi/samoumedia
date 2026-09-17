@@ -4,6 +4,7 @@ import { fr } from 'date-fns/locale';
 import type { Article } from '../types';
 import { motion } from 'motion/react';
 import { Key } from 'react';
+import { Play } from 'lucide-react';
 
 interface ArticleCardProps {
   article: Article;
@@ -16,18 +17,27 @@ interface ArticleCardProps {
 
 export default function ArticleCard({ article, featured, categoryName, compact, number }: ArticleCardProps) {
   const dateStr = formatDistanceToNow(new Date(article.date), { addSuffix: true, locale: fr });
+  
+  const getYouTubeId = (url?: string) => {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+  const youtubeId = getYouTubeId(article.videoUrl);
 
   if (compact) {
     return (
-      <Link to={`/article/${article.id}`} className="group flex gap-5 py-5 border-b border-gray-100 last:border-0 hover:bg-gray-50/50 transition-colors duration-500 rounded-lg relative overflow-hidden">
+      <Link to={`/article/${article.slug}`} className="group flex gap-5 py-5 border-b border-gray-100 last:border-0 hover:bg-gray-50/50 transition-colors duration-500 rounded-lg relative overflow-hidden">
         {number && (
           <div className="w-10 h-10 shrink-0 bg-brand-red text-white flex items-center justify-center font-bold rounded-sm relative z-10 shadow-sm group-hover:scale-110 transition-transform duration-500 ease-out font-serif text-lg">
             {number}
           </div>
         )}
         <div className="flex-1 relative z-10">
-          <h4 className="font-serif font-bold text-gray-900 group-hover:text-brand-red transition-colors duration-300 leading-tight mb-3 md:text-lg">
-            {article.title}
+          <h4 className="font-serif font-bold text-gray-900 group-hover:text-brand-red transition-colors duration-300 leading-tight mb-3 md:text-lg flex items-start gap-2">
+            {youtubeId && <Play className="w-4 h-4 mt-1 text-brand-red shrink-0" fill="currentColor" />}
+            <span>{article.title}</span>
           </h4>
           <div className="flex items-center gap-3 text-[10px] text-gray-400 font-bold uppercase tracking-widest">
             <span className="text-brand-red">{categoryName || article.categoryId}</span>
@@ -40,26 +50,36 @@ export default function ArticleCard({ article, featured, categoryName, compact, 
   }
 
   return (
-    <Link to={`/article/${article.id}`} className={`group flex flex-col ${featured ? 'md:flex-row gap-8 md:gap-12 items-center bg-gray-50 rounded-2xl overflow-hidden hover:shadow-2xl transition-shadow duration-700 border border-gray-100' : 'gap-5'} relative`}>
+    <Link to={`/article/${article.slug}`} className={`group flex flex-col ${featured ? 'md:flex-row gap-8 md:gap-12 items-center bg-gray-50 rounded-2xl overflow-hidden hover:shadow-2xl transition-shadow duration-700 border border-gray-100' : 'gap-5'} relative`}>
       <div className={`relative overflow-hidden ${featured ? 'md:w-3/5 w-full aspect-[4/3] md:aspect-[16/10]' : 'rounded-xl w-full aspect-[4/3]'} shadow-sm bg-gray-100`}>
-        <div className="absolute top-4 left-4 z-10 bg-brand-red text-white px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] rounded-sm shadow-xl transform -translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 ease-out">
+        <div className="absolute top-4 left-4 z-10 bg-brand-red text-white px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] rounded-sm shadow-xl transform -translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 ease-out flex items-center gap-2">
+          {youtubeId && <Play className="w-3 h-3" fill="currentColor" />}
           {categoryName || article.categoryId}
         </div>
+        
+        {youtubeId && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+            <div className="w-16 h-16 bg-brand-red/90 rounded-full flex items-center justify-center text-white backdrop-blur-sm group-hover:scale-110 transition-transform duration-500 shadow-2xl">
+              <Play className="w-8 h-8 ml-1" fill="currentColor" />
+            </div>
+          </div>
+        )}
+
         <motion.div
           whileHover={{ scale: 1.02 }}
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="w-full h-full"
         >
           <motion.img 
-            src={article.imageUrl} 
+            src={article.imageUrl || (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg` : '')} 
             alt={article.title} 
             className="w-full h-full object-cover"
             whileHover={{ scale: 1.05 }}
             transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
           />
         </motion.div>
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-500" />
-        {featured && <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent md:hidden" />}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-500 z-10" />
+        {featured && <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent md:hidden z-10" />}
       </div>
       
       <div className={`flex flex-col justify-center ${featured ? 'md:w-2/5 absolute bottom-0 p-8 md:relative md:p-12 md:bg-transparent text-white md:text-gray-900 z-10' : 'flex-1'}`}>

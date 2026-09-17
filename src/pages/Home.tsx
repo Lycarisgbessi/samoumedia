@@ -40,7 +40,7 @@ export default function Home() {
         {/* Main Featured */}
         {mainFeatured && (
           <div className="lg:col-span-8 relative group overflow-hidden">
-            <Link to={`/article/${mainFeatured.id}`} className="block w-full h-[400px] md:h-[500px]">
+            <Link to={`/article/${mainFeatured.slug}`} className="block w-full h-[400px] md:h-[500px]">
               <img src={mainFeatured.imageUrl} alt={mainFeatured.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
@@ -71,7 +71,7 @@ export default function Home() {
         {/* Sub Featured */}
         <div className="lg:col-span-4 flex flex-col justify-between">
           {subFeatured.map((article) => (
-            <Link to={`/article/${article.id}`} key={article.id} className="flex gap-4 group mb-4 last:mb-0 bg-gray-50 hover:bg-gray-100 transition-colors">
+            <Link to={`/article/${article.slug}`} key={article.id} className="flex gap-4 group mb-4 last:mb-0 bg-gray-50 hover:bg-gray-100 transition-colors">
               <div className="w-1/3 aspect-[4/3] shrink-0 overflow-hidden">
                 <img src={article.imageUrl} alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
               </div>
@@ -115,7 +115,7 @@ export default function Home() {
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {latestArticles.map((article) => (
-              <Link to={`/article/${article.id}`} key={article.id} className="group">
+              <Link to={`/article/${article.slug}`} key={article.id} className="group">
                 <div className="relative aspect-[4/3] mb-3 overflow-hidden">
                   <img src={article.imageUrl} alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                   <div className="absolute bottom-0 left-0 bg-brand-blue text-white text-[10px] font-bold uppercase px-2 py-0.5">
@@ -141,7 +141,7 @@ export default function Home() {
           
           <div className="flex flex-col gap-4">
             {mostRead.map((article, index) => (
-              <Link to={`/article/${article.id}`} key={article.id} className="flex gap-3 group items-start border-b border-gray-100 pb-4 last:border-0">
+              <Link to={`/article/${article.slug}`} key={article.id} className="flex gap-3 group items-start border-b border-gray-100 pb-4 last:border-0">
                 <div className="w-8 h-8 shrink-0 bg-brand-red text-white flex items-center justify-center font-bold text-lg">
                   {index + 1}
                 </div>
@@ -167,7 +167,7 @@ export default function Home() {
           <div className="relative">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {samouBentyArticles.map((article) => (
-                <Link to={`/article/${article.id}`} key={article.id} className="group">
+                <Link to={`/article/${article.slug}`} key={article.id} className="group">
                   <div className="aspect-[4/3] overflow-hidden mb-2">
                     <img src={article.imageUrl} alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                   </div>

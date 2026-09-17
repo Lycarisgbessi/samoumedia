@@ -10,12 +10,19 @@
     },
     {
       "src": "server.ts",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": "dist/index.html"
+      }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
+      "dest": "/server.ts"
+    },
+    {
+      "src": "/article/(.*)",
       "dest": "/server.ts"
     },
     {

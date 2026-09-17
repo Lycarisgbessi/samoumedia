@@ -15,10 +15,11 @@ export default function AdminArticles() {
   // Search and Pagination
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [viewTrash, setViewTrash] = useState(false);
   const itemsPerPage = 10;
 
   const fetchArticles = async () => {
-    let url = '/api/articles?';
+    let url = `/api/articles?status=all&trash=${viewTrash}&`;
     if (searchTerm) url += `q=${encodeURIComponent(searchTerm)}&`;
     
     const res = await fetch(url, { cache: 'no-store' });
@@ -33,7 +34,7 @@ export default function AdminArticles() {
       fetchArticles();
     }, 300);
     return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm]);
+  }, [searchTerm, viewTrash]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,10 +56,15 @@ export default function AdminArticles() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Voulez-vous vraiment supprimer cet article ?')) {
-      await authFetch(`/api/articles/${id}`, { method: 'DELETE' });
+    if (confirm(viewTrash ? 'Voulez-vous vraiment détruire cet article définitivement ?' : 'Mettre cet article à la corbeille ?')) {
+      await authFetch(`/api/articles/${id}${viewTrash ? '/hard' : ''}`, { method: 'DELETE' });
       fetchArticles();
     }
+  };
+  
+  const handleRestore = async (id: string) => {
+    await authFetch(`/api/articles/${id}/restore`, { method: 'PUT' });
+    fetchArticles();
   };
 
   const handleToggleFeatured = async (article: any) => {
@@ -102,9 +108,17 @@ export default function AdminArticles() {
   return (
     <div>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <h1 className="text-3xl font-serif font-black text-gray-900">Articles</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-3xl font-serif font-black text-gray-900">Articles</h1>
+          <button 
+            onClick={() => setViewTrash(!viewTrash)}
+            className={`px-3 py-1 text-sm font-bold rounded-lg border transition-colors ${viewTrash ? 'bg-red-50 text-red-600 border-red-200' : 'bg-white text-gray-600 hover:bg-gray-50 border-gray-200'}`}
+          >
+            {viewTrash ? 'Voir Actifs' : 'Voir Corbeille'}
+          </button>
+        </div>
         
-        {!isEditing && (
+        {!isEditing && !viewTrash && (
           <div className="flex w-full md:w-auto gap-4">
             <div className="relative flex-1 md:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
@@ -123,9 +137,12 @@ export default function AdminArticles() {
                   excerpt: '',
                   content: '',
                   categoryId: categories[0]?.id || '',
+                  videoUrl: '',
                   author: 'Rédaction',
                   readTime: '3 min',
-                  isFeatured: false
+                  isFeatured: false,
+                  status: 'DRAFT',
+                  tags: []
                 });
                 setIsEditing(true);
               }}
@@ -171,11 +188,15 @@ export default function AdminArticles() {
                     accept="image/*" 
                     onChange={handleImageUpload} 
                     className="w-full px-4 py-2 border rounded-lg bg-white" 
-                    required={!currentArticle.imageUrl}
+                    required={!currentArticle.imageUrl && !currentArticle.videoUrl}
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-gray-700">Lien YouTube (Optionnel pour les reportages)</label>
+                <input type="url" value={currentArticle.videoUrl || ''} onChange={e => setCurrentArticle({...currentArticle, videoUrl: e.target.value})} className="w-full px-4 py-2 border rounded-lg" placeholder="ex: https://youtu.be/..." />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:col-span-2">
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-gray-700">Auteur</label>
                   <input type="text" required value={currentArticle.author || ''} onChange={e => setCurrentArticle({...currentArticle, author: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
@@ -183,6 +204,19 @@ export default function AdminArticles() {
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-gray-700">Temps de lecture</label>
                   <input type="text" value={currentArticle.readTime || ''} onChange={e => setCurrentArticle({...currentArticle, readTime: e.target.value})} className="w-full px-4 py-2 border rounded-lg" placeholder="ex: 4 min" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-gray-700">Statut</label>
+                  <select value={currentArticle.status || 'DRAFT'} onChange={e => setCurrentArticle({...currentArticle, status: e.target.value})} className="w-full px-4 py-2 border rounded-lg" required>
+                    <option value="DRAFT">Brouillon</option>
+                    <option value="PUBLISHED">Publié</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-gray-700">Tags (séparés par des virgules)</label>
+                  <input type="text" value={(currentArticle.tags || []).join(', ')} onChange={e => setCurrentArticle({...currentArticle, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean)})} className="w-full px-4 py-2 border rounded-lg" placeholder="ex: Politique, Elections" />
                 </div>
               </div>
             </div>
@@ -213,76 +247,96 @@ export default function AdminArticles() {
         </div>
       ) : (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-gray-50 border-b border-gray-100">
-                <tr>
-                  <th className="px-6 py-4 text-sm font-bold text-gray-500 uppercase">Article</th>
-                  <th className="px-6 py-4 text-sm font-bold text-gray-500 uppercase">Catégorie</th>
-                  <th className="px-6 py-4 text-sm font-bold text-gray-500 uppercase">Date</th>
-                  <th className="px-6 py-4 text-sm font-bold text-gray-500 uppercase text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {paginatedArticles.map((article) => (
-                  <tr key={article.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-4">
-                        <img src={article.imageUrl} alt="" className="w-16 h-16 object-cover rounded-lg" />
-                        <div>
-                          <div className="font-bold text-gray-900 line-clamp-1">{article.title}</div>
-                          <div className="text-sm text-gray-500 flex items-center gap-2">
-                            <span>{article.author}</span>
-                            <span>•</span>
-                            <span className="flex items-center gap-1 text-xs">
-                              <Star size={12} className={article.isFeatured ? "fill-brand-red text-brand-red" : "text-gray-300"} />
-                              {article.isFeatured ? "À la Une" : "Standard"}
-                            </span>
-                          </div>
-                        </div>
+        <table className="w-full text-left">
+          <thead className="bg-gray-50 border-b border-gray-100 hidden md:table-header-group">
+            <tr>
+              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Article</th>
+              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Catégorie</th>
+              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
+              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 block md:table-row-group">
+            {paginatedArticles.map((article) => (
+              <tr key={article.id} className="hover:bg-gray-50 transition-colors block md:table-row border-b md:border-b-0 p-4 md:p-0">
+                <td className="md:px-6 md:py-4 block md:table-cell mb-4 md:mb-0">
+                  <div className="flex items-center gap-4">
+                    <img src={article.imageUrl} alt="" className="w-16 h-16 object-cover rounded-lg shrink-0" />
+                    <div>
+                      <div className="font-bold text-gray-900 line-clamp-2 md:line-clamp-1 flex items-center gap-2">
+                        {article.status === 'DRAFT' ? (
+                          <span className="w-2 h-2 rounded-full bg-orange-400" title="Brouillon"></span>
+                        ) : (
+                          <span className="w-2 h-2 rounded-full bg-green-500" title="Publié"></span>
+                        )}
+                        {article.title}
                       </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-bold uppercase tracking-wider">
-                        {categories.find(c => c.id === article.categoryId)?.name || 'Inconnue'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {new Date(article.date).toLocaleDateString('fr-FR')}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => handleToggleFeatured(article)} className={`p-2 rounded-lg ${article.isFeatured ? 'text-brand-red bg-red-50' : 'text-gray-400 hover:bg-gray-100'}`} title={article.isFeatured ? "Retirer de la Une" : "Mettre à la Une"}>
+                      <div className="text-sm text-gray-500 flex flex-wrap items-center gap-2 mt-1">
+                        <span>{article.author}</span>
+                        <span className="hidden md:inline">•</span>
+                        <span className="flex items-center gap-1 text-xs">
+                          <Star size={12} className={article.isFeatured ? "fill-brand-red text-brand-red" : "text-gray-300"} />
+                          {article.isFeatured ? "À la Une" : "Standard"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td className="md:px-6 md:py-4 block md:table-cell mb-2 md:mb-0">
+                  <div className="md:hidden text-xs text-gray-400 font-bold uppercase mb-1">Catégorie</div>
+                  <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-bold uppercase tracking-wider">
+                    {categories.find(c => c.id === article.categoryId)?.name || 'Inconnue'}
+                  </span>
+                </td>
+                <td className="md:px-6 md:py-4 text-sm text-gray-500 block md:table-cell mb-4 md:mb-0">
+                  <div className="md:hidden text-xs text-gray-400 font-bold uppercase mb-1">Date</div>
+                  {new Date(article.date).toLocaleDateString('fr-FR')}
+                </td>
+                <td className="md:px-6 md:py-4 block md:table-cell">
+                  <div className="flex items-center justify-end gap-2 bg-gray-50 md:bg-transparent -mx-4 -mb-4 p-4 md:m-0 md:p-0 border-t md:border-none">
+                    {!viewTrash ? (
+                      <>
+                        <button onClick={() => handleToggleFeatured(article)} className={`p-2 rounded-lg bg-white md:bg-transparent shadow-sm md:shadow-none ${article.isFeatured ? 'text-brand-red md:bg-red-50' : 'text-gray-400 hover:bg-gray-100'}`} title={article.isFeatured ? "Retirer de la Une" : "Mettre à la Une"}>
                           <Star size={18} className={article.isFeatured ? "fill-brand-red" : ""} />
                         </button>
-                        <button onClick={() => { setCurrentArticle(article); setIsEditing(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
+                        <button onClick={() => { setCurrentArticle(article); setIsEditing(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg bg-white md:bg-transparent shadow-sm md:shadow-none" title="Modifier">
                           <Edit2 size={18} />
                         </button>
-                        <button onClick={() => handleDelete(article.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
+                        <button onClick={() => handleDelete(article.id)} className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg bg-white md:bg-transparent shadow-sm md:shadow-none" title="Mettre à la corbeille">
                           <Trash2 size={18} />
                         </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {articles.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
-                      Aucun article trouvé.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => handleRestore(article.id)} className="px-3 py-1.5 text-xs font-bold text-green-700 bg-green-100 hover:bg-green-200 rounded-lg transition-colors">
+                          Restaurer
+                        </button>
+                        <button onClick={() => handleDelete(article.id)} className="px-3 py-1.5 text-xs font-bold text-red-700 bg-red-100 hover:bg-red-200 rounded-lg transition-colors">
+                          Détruire
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {articles.length === 0 && (
+              <tr className="block md:table-row">
+                <td colSpan={4} className="px-6 py-8 text-center text-gray-500 block md:table-cell">
+                  {viewTrash ? 'La corbeille est vide.' : 'Aucun article trouvé.'}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
 
           {/* Pagination Controls */}
           {totalPages > 1 && (
-            <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+            <div className="px-4 sm:px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
               <span className="text-sm text-gray-500">
                 Affichage de {((currentPage - 1) * itemsPerPage) + 1} à {Math.min(currentPage * itemsPerPage, articles.length)} sur {articles.length} articles
               </span>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap justify-center">
                 <button 
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
@@ -290,7 +344,7 @@ export default function AdminArticles() {
                 >
                   <ChevronLeft size={18} />
                 </button>
-                <div className="flex gap-1 items-center px-2">
+                <div className="flex gap-1 items-center px-1 sm:px-2 flex-wrap justify-center">
                   {Array.from({ length: totalPages }).map((_, i) => (
                     <button
                       key={i}

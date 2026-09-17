@@ -7,55 +7,128 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
+}
+
+model Author {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  avatarUrl String?
+  bio       String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @default(now()) @updatedAt
+  articles   Article[]
+  chroniques Chronique[]
+}
+
 model Category {
-  id       String    @id
-  name     String
-  isActive Boolean   @default(true)
-  order    Int       @default(0)
-  articles Article[]
+  id        String    @id @default(cuid())
+  slug      String    @unique
+  name      String
+  isActive  Boolean   @default(true)
+  order     Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  articles  Article[]
 }
 
 model Article {
-  id         String   @id
+  id         String   @id @default(cuid())
+  slug       String   @unique
   title      String
   excerpt    String?
   content    String
   imageUrl   String?
+  videoUrl   String?
+  
   categoryId String
-  category   Category @relation(fields: [categoryId], references: [id])
-  author     String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  
+  author     String   // Legacy field, kept as is so we don't lose data
+  authorId   String?
+  authorObj  Author?  @relation(fields: [authorId], references: [id])
+  
+  status     String   @default("PUBLISHED") // "DRAFT" or "PUBLISHED"
+  tags       String[] @default([])
+  isDeleted  Boolean  @default(false)
+  
   date       DateTime @default(now())
   readTime   String?
   isFeatured Boolean  @default(false)
   views      Int      @default(0)
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@index([categoryId])
+  @@index([date(sort: Desc)])
+  @@index([views(sort: Desc)])
+  @@index([isFeatured])
+  @@index([status])
+  @@index([isDeleted])
 }
 
 model SiteConfig {
-  id      Int      @id @default(1)
-  name    String
-  slogan  String?
-  address String?
-  phone   String?
-  emails  String[]
-  socials Json?
+  id        Int      @id @default(1)
+  name      String
+  slogan    String?
+  address   String?
+  phone     String?
+  emails    String[]
+  socials   Json?
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 model AdSpace {
-  id        String  @id
+  id        String   @id @default(cuid())
   name      String
   format    String
   location  String
-  isActive  Boolean @default(true)
+  isActive  Boolean  @default(true)
   imageUrl  String?
   targetUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 model Chronique {
-  id          String   @id
+  id          String   @id @default(cuid())
+  slug        String   @unique
   title       String
-  author      String
+  excerpt     String?
+  content     String   @default("") // Nouveauté : texte principal
+  
+  author      String   // Legacy field
   authorRole  String?
   authorImage String?
+  
+  authorId    String?
+  authorObj   Author?  @relation(fields: [authorId], references: [id])
+  
+  status      String   @default("PUBLISHED")
+  tags        String[] @default([])
+  isDeleted   Boolean  @default(false)
+  
   date        DateTime @default(now())
-  excerpt     String?
+  views       Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+  
+  @@index([status])
+  @@index([isDeleted])
+  @@index([date(sort: Desc)])
+}
+
+model Subscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }

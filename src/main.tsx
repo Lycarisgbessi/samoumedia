@@ -45,8 +45,8 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/" element={<App />}>
           <Route index element={<Home />} />
           <Route path="rubriques" element={<Rubriques />} />
-          <Route path="rubriques/:id" element={<CategoryView />} />
-          <Route path="article/:id" element={<ArticleView />} />
+          <Route path="rubriques/:slug" element={<CategoryView />} />
+          <Route path="article/:slug" element={<ArticleView />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="about" element={<About />} />
           <Route path="contact" element={<Contact />} />

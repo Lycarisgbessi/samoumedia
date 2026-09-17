@@ -52,7 +52,7 @@ export function useAds(location?: string, format?: string) {
   return { ads, loading };
 }
 
-export function useArticles(params?: { category?: string; featured?: boolean; limit?: number; sort?: string; q?: string }) {
+export function useArticles(params?: { category?: string; featured?: boolean; limit?: number; sort?: string; q?: string; status?: string; tag?: string }) {
   const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -63,6 +63,8 @@ export function useArticles(params?: { category?: string; featured?: boolean; li
     if (params?.limit) url += `limit=${params.limit}&`;
     if (params?.sort) url += `sort=${params.sort}&`;
     if (params?.q) url += `q=${encodeURIComponent(params.q)}&`;
+    if (params?.status) url += `status=${params.status}&`;
+    if (params?.tag) url += `tag=${encodeURIComponent(params.tag)}&`;
 
     fetch(url, { cache: 'no-store' })
       .then(res => res.json())
@@ -70,7 +72,7 @@ export function useArticles(params?: { category?: string; featured?: boolean; li
         setArticles(data);
         setLoading(false);
       });
-  }, [params?.category, params?.featured, params?.limit, params?.sort, params?.q]);
+  }, [params?.category, params?.featured, params?.limit, params?.sort, params?.q, params?.status, params?.tag]);
 
   return { articles, loading };
 }

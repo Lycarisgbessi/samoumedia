@@ -6,12 +6,14 @@ import { motion } from 'motion/react';
 import { AdSpace } from '../components/AdSpace';
 
 export default function CategoryView() {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const { categories } = useCategories();
-  const { articles, loading } = useArticles({ category: id });
-
-  const category = categories.find(c => c.id === id);
-  const categoryName = category?.name || id || 'Rubrique';
+  
+  const category = categories.find(c => c.slug === slug);
+  const categoryId = category?.id || slug; // fallback in case it's still using ID for some reason
+  
+  const { articles, loading } = useArticles({ category: categoryId });
+  const categoryName = category?.name || slug || 'Rubrique';
 
   if (loading) return <div className="min-h-screen p-10 flex justify-center text-brand-dark font-mono text-sm tracking-widest uppercase">Chargement...</div>;
 

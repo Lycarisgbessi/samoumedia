@@ -150,7 +150,7 @@ export default function AdminAds() {
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full text-left">
-          <thead className="bg-gray-50 border-b border-gray-100">
+          <thead className="bg-gray-50 border-b border-gray-100 hidden md:table-header-group">
             <tr>
               <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Nom</th>
               <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Format</th>
@@ -159,29 +159,35 @@ export default function AdminAds() {
               <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-100 block md:table-row-group">
             {ads.map((ad) => (
-              <tr key={ad.id} className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-6 py-4 font-medium text-gray-900">
+              <tr key={ad.id} className="hover:bg-gray-50/50 transition-colors block md:table-row border-b md:border-b-0 p-4 md:p-0">
+                <td className="md:px-6 md:py-4 font-medium text-gray-900 block md:table-cell mb-4 md:mb-0">
+                  <div className="md:hidden text-xs text-gray-400 font-bold uppercase mb-1">Nom</div>
                   {ad.name}
                   <span className="block text-xs text-gray-500 font-mono mt-1">{ad.location}</span>
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-600 capitalize">{ad.format}</td>
-                <td className="px-6 py-4">
+                <td className="md:px-6 md:py-4 text-sm text-gray-600 capitalize block md:table-cell mb-2 md:mb-0">
+                  <div className="md:hidden text-xs text-gray-400 font-bold uppercase mb-1">Format</div>
+                  {ad.format}
+                </td>
+                <td className="md:px-6 md:py-4 block md:table-cell mb-4 md:mb-0">
+                  <div className="md:hidden text-xs text-gray-400 font-bold uppercase mb-1">Aperçu</div>
                   <div className="h-10 w-20 bg-gray-200 rounded overflow-hidden">
                     {ad.imageUrl && <img onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Crect fill='%23f3f4f6' width='800' height='600'/%3E%3Ctext fill='%239ca3af' font-family='sans-serif' font-size='30' dy='10.5' font-weight='bold' x='50%25' y='50%25' text-anchor='middle'%3ESAMOU MEDIA%3C/text%3E%3C/svg%3E"; }} src={ad.imageUrl} alt="Ad" className="w-full h-full object-cover" />}
                   </div>
                 </td>
-                <td className="px-6 py-4">
-                  <button onClick={() => handleToggleActive(ad)} className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full ${ad.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                <td className="md:px-6 md:py-4 block md:table-cell mb-4 md:mb-0">
+                  <div className="md:hidden text-xs text-gray-400 font-bold uppercase mb-1">Statut</div>
+                  <button onClick={() => handleToggleActive(ad)} className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full w-max ${ad.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                     {ad.isActive ? <CheckCircle size={14} /> : <XCircle size={14} />}
                     {ad.isActive ? 'Actif' : 'Inactif'}
                   </button>
                 </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-2">
-                    <button onClick={() => handleEdit(ad)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit2 size={18} /></button>
-                    <button onClick={() => handleDelete(ad.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={18} /></button>
+                <td className="md:px-6 md:py-4 text-left md:text-right block md:table-cell">
+                  <div className="flex justify-end gap-2 bg-gray-50 md:bg-transparent -mx-4 -mb-4 p-4 md:m-0 md:p-0 border-t md:border-none">
+                    <button onClick={() => handleEdit(ad)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors bg-white md:bg-transparent shadow-sm md:shadow-none"><Edit2 size={18} /></button>
+                    <button onClick={() => handleDelete(ad.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors bg-white md:bg-transparent shadow-sm md:shadow-none"><Trash2 size={18} /></button>
                   </div>
                 </td>
               </tr>
