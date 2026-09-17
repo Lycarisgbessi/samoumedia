@@ -356,7 +356,7 @@ app.get('/api/subscribers', authenticateToken, asyncHandler(async (req: any, res
 // Error Handling Middleware
 app.use((err: any, req: any, res: any, next: any) => {
   if (err instanceof z.ZodError) {
-    return res.status(400).json({ error: 'Données invalides', details: err.errors });
+    return res.status(400).json({ error: 'Données invalides', details: err.issues });
   }
   console.error(err);
   res.status(500).json({ error: 'Une erreur interne est survenue' });
@@ -416,7 +416,7 @@ if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
 }
 
 if (!process.env.VERCEL) {
-  const PORT = process.env.PORT || 3000;
+  const PORT = parseInt(process.env.PORT || '3000', 10);
   app.listen(PORT, '0.0.0.0', () => console.log(`Server running on http://localhost:${PORT}`));
 }
 
