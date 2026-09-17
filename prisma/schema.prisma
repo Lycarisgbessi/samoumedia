@@ -81,6 +81,7 @@ model SiteConfig {
   phone     String?
   emails    String[]
   socials   Json?
+  flashInfo String? // Bandeau défilant "FLASH INFO" — si vide, les derniers titres publiés défilent
   updatedAt DateTime @default(now()) @updatedAt
 }
 

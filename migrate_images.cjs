@@ -3,10 +3,19 @@ const { v2: cloudinary } = require('cloudinary');
 const path = require('path');
 const fs = require('fs');
 
+// Les identifiants sont lus depuis l'environnement (.env) — jamais en dur dans le code.
+require('dotenv').config();
+
+const { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } = process.env;
+if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
+  console.error('Erreur : CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY et CLOUDINARY_API_SECRET doivent être définis dans .env');
+  process.exit(1);
+}
+
 cloudinary.config({
-  cloud_name: 't1iayx8c',
-  api_key: '176626899453311',
-  api_secret: 'E1sHalC4uFyHpzNN_kvFma5Zygg'
+  cloud_name: CLOUDINARY_CLOUD_NAME,
+  api_key: CLOUDINARY_API_KEY,
+  api_secret: CLOUDINARY_API_SECRET
 });
 
 const prisma = new PrismaClient();

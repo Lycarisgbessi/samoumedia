@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Settings, Layers, FileText, Image as ImageIcon, LogOut, Mic, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type MouseEvent } from 'react';
 import { getToken, removeToken } from '../../lib/auth';
 
 export default function AdminLayout() {
@@ -29,7 +29,7 @@ export default function AdminLayout() {
     { name: 'Publicités', path: '/admin/ads', icon: ImageIcon },
   ];
 
-  const handleLogout = (e: React.MouseEvent) => {
+  const handleLogout = (e: MouseEvent) => {
     e.preventDefault();
     removeToken();
     navigate('/admin/login');

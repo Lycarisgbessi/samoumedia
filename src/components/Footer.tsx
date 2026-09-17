@@ -78,14 +78,14 @@ export default function Footer() {
             <ul className="space-y-3 text-sm text-gray-600 font-medium flex-1">
               {leftColCategories.map(cat => (
                 <li key={cat.id}>
-                  <Link to={`/category/${cat.id}`} className="hover:text-brand-red transition-colors">{cat.name}</Link>
+                  <Link to={`/rubriques/${cat.slug}`} className="hover:text-brand-red transition-colors">{cat.name}</Link>
                 </li>
               ))}
             </ul>
             <ul className="space-y-3 text-sm text-gray-600 font-medium flex-1">
               {rightColCategories.map(cat => (
                 <li key={cat.id}>
-                  <Link to={`/category/${cat.id}`} className="hover:text-brand-red transition-colors">{cat.name}</Link>
+                  <Link to={`/rubriques/${cat.slug}`} className="hover:text-brand-red transition-colors">{cat.name}</Link>
                 </li>
               ))}
             </ul>

@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react';
 import { Plus, Edit2, Trash2, X, Save, Star, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { useCategories } from '../../lib/hooks';
 import { authFetch } from '../../lib/auth';
 import { compressImage } from '../../utils/imageCompression';
+import { FALLBACK_IMAGE, onImageError } from '../../lib/media';
 
 export default function AdminArticles() {
   const [articles, setArticles] = useState<any[]>([]);
@@ -37,7 +38,7 @@ export default function AdminArticles() {
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm, viewTrash]);
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = async (e: FormEvent) => {
     e.preventDefault();
     if (currentArticle.id) {
       await authFetch(`/api/articles/${currentArticle.id}`, {
@@ -77,7 +78,7 @@ export default function AdminArticles() {
     fetchArticles();
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -145,7 +146,7 @@ export default function AdminArticles() {
                   author: 'Rédaction',
                   readTime: '3 min',
                   isFeatured: false,
-                  status: 'DRAFT',
+                  status: 'PUBLISHED',
                   tags: []
                 });
                 setIsEditing(true);
@@ -250,98 +251,101 @@ export default function AdminArticles() {
           </form>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-gray-50 border-b border-gray-100 hidden md:table-header-group">
-            <tr>
-              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Article</th>
-              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Catégorie</th>
-              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
-              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 block md:table-row-group">
+        <div>
+          {/* Liste en cartes : boutons d'action toujours visibles, y compris sur téléphone */}
+          <div className="grid grid-cols-1 gap-4">
             {paginatedArticles.map((article) => (
-              <tr key={article.id} className="hover:bg-gray-50 transition-colors block md:table-row border-b md:border-b-0 p-4 md:p-0">
-                <td className="md:px-6 md:py-4 block md:table-cell mb-4 md:mb-0">
-                  <div className="flex items-center gap-4">
-                    <img src={article.imageUrl} alt="" className="w-16 h-16 object-cover rounded-lg shrink-0" />
-                    <div>
-                      <div className="font-bold text-gray-900 line-clamp-2 md:line-clamp-1 flex items-center gap-2">
-                        {article.status === 'DRAFT' ? (
-                          <span className="w-2 h-2 rounded-full bg-orange-400" title="Brouillon"></span>
-                        ) : (
-                          <span className="w-2 h-2 rounded-full bg-green-500" title="Publié"></span>
-                        )}
-                        {article.title}
-                      </div>
-                      <div className="text-sm text-gray-500 flex flex-wrap items-center gap-2 mt-1">
-                        <span>{article.author}</span>
-                        <span className="hidden md:inline">•</span>
-                        <span className="flex items-center gap-1 text-xs">
-                          <Star size={12} className={article.isFeatured ? "fill-brand-red text-brand-red" : "text-gray-300"} />
-                          {article.isFeatured ? "À la Une" : "Standard"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </td>
-                <td className="md:px-6 md:py-4 block md:table-cell mb-2 md:mb-0">
-                  <div className="md:hidden text-xs text-gray-400 font-bold uppercase mb-1">Catégorie</div>
-                  <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-bold uppercase tracking-wider">
-                    {categories.find(c => c.id === article.categoryId)?.name || 'Inconnue'}
-                  </span>
-                </td>
-                <td className="md:px-6 md:py-4 text-sm text-gray-500 block md:table-cell mb-4 md:mb-0">
-                  <div className="md:hidden text-xs text-gray-400 font-bold uppercase mb-1">Date</div>
-                  {new Date(article.date).toLocaleDateString('fr-FR')}
-                </td>
-                <td className="md:px-6 md:py-4 block md:table-cell">
-                  <div className="flex items-center justify-end gap-2 bg-gray-50 md:bg-transparent -mx-4 -mb-4 p-4 md:m-0 md:p-0 border-t md:border-none">
-                    {!viewTrash ? (
-                      <>
-                        <button onClick={() => handleToggleFeatured(article)} className={`p-2 rounded-lg bg-white md:bg-transparent shadow-sm md:shadow-none ${article.isFeatured ? 'text-brand-red md:bg-red-50' : 'text-gray-400 hover:bg-gray-100'}`} title={article.isFeatured ? "Retirer de la Une" : "Mettre à la Une"}>
-                          <Star size={18} className={article.isFeatured ? "fill-brand-red" : ""} />
-                        </button>
-                        <button onClick={() => { setCurrentArticle(article); setIsEditing(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg bg-white md:bg-transparent shadow-sm md:shadow-none" title="Modifier">
-                          <Edit2 size={18} />
-                        </button>
-                        <button onClick={() => handleDelete(article.id)} className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg bg-white md:bg-transparent shadow-sm md:shadow-none" title="Mettre à la corbeille">
-                          <Trash2 size={18} />
-                        </button>
-                      </>
+              <div key={article.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex flex-col sm:flex-row gap-4">
+                <img
+                  src={article.imageUrl || (article.videoUrl ? `https://img.youtube.com/vi/${(article.videoUrl.match(/(?:youtu\.be\/|v=|embed\/)([\w-]{11})/) || [])[1] || ''}/hqdefault.jpg` : FALLBACK_IMAGE)}
+                  onError={onImageError}
+                  alt=""
+                  className="w-full sm:w-24 h-24 object-cover rounded-lg shrink-0 bg-gray-100"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    {article.status === 'DRAFT' ? (
+                      <span className="px-2 py-0.5 bg-orange-100 text-orange-600 rounded text-[10px] font-bold uppercase tracking-wider">Brouillon</span>
                     ) : (
-                      <>
-                        <button onClick={() => handleRestore(article.id)} className="px-3 py-1.5 text-xs font-bold text-green-700 bg-green-100 hover:bg-green-200 rounded-lg transition-colors">
-                          Restaurer
-                        </button>
-                        <button onClick={() => handleDelete(article.id)} className="px-3 py-1.5 text-xs font-bold text-red-700 bg-red-100 hover:bg-red-200 rounded-lg transition-colors">
-                          Détruire
-                        </button>
-                      </>
+                      <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-[10px] font-bold uppercase tracking-wider">Publié</span>
+                    )}
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold uppercase tracking-wider">
+                      {categories.find(c => c.id === article.categoryId)?.name || 'Inconnue'}
+                    </span>
+                    {article.isFeatured && (
+                      <span className="px-2 py-0.5 bg-red-100 text-brand-red rounded text-[10px] font-bold uppercase tracking-wider">À la Une</span>
                     )}
                   </div>
-                </td>
-              </tr>
+                  <h3 className="font-bold text-gray-900 leading-snug mb-1 line-clamp-2">{article.title}</h3>
+                  <div className="text-xs text-gray-500 flex flex-wrap gap-x-3">
+                    <span>{article.author}</span>
+                    <span>•</span>
+                    <span>{new Date(article.date).toLocaleDateString('fr-FR')}</span>
+                  </div>
+                </div>
+                <div className="flex sm:flex-col gap-2 shrink-0 justify-end">
+                  {!viewTrash ? (
+                    <>
+                      <button
+                        onClick={() => handleToggleFeatured(article)}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border transition-colors ${article.isFeatured ? 'bg-red-50 text-brand-red border-red-200' : 'text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                        title={article.isFeatured ? 'Retirer de la Une' : 'Mettre à la Une'}
+                      >
+                        <Star size={14} className={article.isFeatured ? 'fill-brand-red' : ''} />
+                        {article.isFeatured ? 'Retirer Une' : 'Mettre Une'}
+                      </button>
+                      <button
+                        onClick={() => { setCurrentArticle(article); setIsEditing(true); }}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border border-blue-200 text-blue-700 hover:bg-blue-50 transition-colors"
+                        title="Modifier"
+                      >
+                        <Edit2 size={14} />
+                        Modifier
+                      </button>
+                      <button
+                        onClick={() => handleDelete(article.id)}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border border-orange-200 text-orange-600 hover:bg-orange-50 transition-colors"
+                        title="Mettre à la corbeille"
+                      >
+                        <Trash2 size={14} />
+                        Corbeille
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => handleRestore(article.id)}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border border-green-200 text-green-700 hover:bg-green-50 transition-colors"
+                      >
+                        Restaurer
+                      </button>
+                      <button
+                        onClick={() => handleDelete(article.id)}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border border-red-200 text-red-700 hover:bg-red-50 transition-colors"
+                      >
+                        <Trash2 size={14} />
+                        Détruire
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
             ))}
             {articles.length === 0 && (
-              <tr className="block md:table-row">
-                <td colSpan={4} className="px-6 py-8 text-center text-gray-500 block md:table-cell">
-                  {viewTrash ? 'La corbeille est vide.' : 'Aucun article trouvé.'}
-                </td>
-              </tr>
+              <div className="bg-white rounded-xl border border-gray-100 p-10 text-center text-gray-500">
+                {viewTrash ? 'La corbeille est vide.' : 'Aucun article trouvé.'}
+              </div>
             )}
-          </tbody>
-        </table>
+          </div>
 
           {/* Pagination Controls */}
           {totalPages > 1 && (
-            <div className="px-4 sm:px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+            <div className="mt-4 px-4 sm:px-6 py-4 bg-white rounded-xl border border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
               <span className="text-sm text-gray-500">
                 Affichage de {((currentPage - 1) * itemsPerPage) + 1} à {Math.min(currentPage * itemsPerPage, articles.length)} sur {articles.length} articles
               </span>
               <div className="flex gap-2 flex-wrap justify-center">
-                <button 
+                <button
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
                   className="p-2 rounded-lg border hover:bg-gray-50 disabled:opacity-50"
@@ -359,7 +363,7 @@ export default function AdminArticles() {
                     </button>
                   ))}
                 </div>
-                <button 
+                <button
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
                   className="p-2 rounded-lg border hover:bg-gray-50 disabled:opacity-50"

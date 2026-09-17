@@ -3,9 +3,10 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import App from './App.tsx';
 import Home from './pages/Home.tsx';
-import Dashboard from './pages/Dashboard.tsx';
 import CategoryView from './pages/CategoryView.tsx';
 import ArticleView from './pages/ArticleView.tsx';
+import ChroniqueView from './pages/ChroniqueView.tsx';
+import SearchPage from './pages/Search.tsx';
 import About from './pages/About.tsx';
 import Contact from './pages/Contact.tsx';
 import Podcasts from './pages/Podcasts.tsx';
@@ -47,7 +48,8 @@ createRoot(document.getElementById('root')!).render(
           <Route path="rubriques" element={<Rubriques />} />
           <Route path="rubriques/:slug" element={<CategoryView />} />
           <Route path="article/:slug" element={<ArticleView />} />
-          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="chronique/:slug" element={<ChroniqueView />} />
+          <Route path="recherche" element={<SearchPage />} />
           <Route path="about" element={<About />} />
           <Route path="contact" element={<Contact />} />
           <Route path="podcasts" element={<Podcasts />} />

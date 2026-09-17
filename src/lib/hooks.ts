@@ -1,93 +1,90 @@
 import { useEffect, useState } from 'react';
+import type { Ad, Article, Category, Chronique, SiteConfig } from '../types';
+import { normalizeArticle } from './text';
 
 export function useCategories() {
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch('/api/categories', { cache: 'no-store' })
       .then(res => res.json())
-      .then(data => {
-        setCategories(data);
-        setLoading(false);
-      });
+      .then((data: Category[]) => setCategories(Array.isArray(data) ? data : []))
+      .catch(() => setCategories([]))
+      .finally(() => setLoading(false));
   }, []);
 
   return { categories, loading, setCategories };
 }
 
 export function useConfig() {
-  const [config, setConfig] = useState<any>(null);
+  const [config, setConfig] = useState<SiteConfig | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch('/api/config', { cache: 'no-store' })
       .then(res => res.json())
-      .then(data => {
-        setConfig(data);
-        setLoading(false);
-      });
+      .then((data: SiteConfig | null) => setConfig(data))
+      .catch(() => setConfig(null))
+      .finally(() => setLoading(false));
   }, []);
 
   return { config, loading };
 }
 
 export function useAds(location?: string, format?: string) {
-  const [ads, setAds] = useState<any[]>([]);
+  const [ads, setAds] = useState<Ad[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let url = '/api/ads?';
-    if (location) url += `location=${location}&`;
-    if (format) url += `format=${format}`;
-    
+    if (location) url += `location=${encodeURIComponent(location)}&`;
+    if (format) url += `format=${encodeURIComponent(format)}`;
+
     fetch(url, { cache: 'no-store' })
       .then(res => res.json())
-      .then(data => {
-        setAds(data.filter((ad: any) => ad.isActive));
-        setLoading(false);
-      });
+      .then((data: Ad[]) => setAds(Array.isArray(data) ? data.filter(ad => ad.isActive) : []))
+      .catch(() => setAds([]))
+      .finally(() => setLoading(false));
   }, [location, format]);
 
   return { ads, loading };
 }
 
 export function useArticles(params?: { category?: string; featured?: boolean; limit?: number; sort?: string; q?: string; status?: string; tag?: string }) {
-  const [articles, setArticles] = useState<any[]>([]);
+  const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let url = '/api/articles?';
-    if (params?.category) url += `category=${params.category}&`;
+    if (params?.category) url += `category=${encodeURIComponent(params.category)}&`;
     if (params?.featured) url += `featured=${params.featured}&`;
     if (params?.limit) url += `limit=${params.limit}&`;
-    if (params?.sort) url += `sort=${params.sort}&`;
+    if (params?.sort) url += `sort=${encodeURIComponent(params.sort)}&`;
     if (params?.q) url += `q=${encodeURIComponent(params.q)}&`;
-    if (params?.status) url += `status=${params.status}&`;
+    if (params?.status) url += `status=${encodeURIComponent(params.status)}&`;
     if (params?.tag) url += `tag=${encodeURIComponent(params.tag)}&`;
 
     fetch(url, { cache: 'no-store' })
       .then(res => res.json())
-      .then(data => {
-        setArticles(data);
-        setLoading(false);
-      });
+      .then((data: Article[]) => setArticles(Array.isArray(data) ? data.map(normalizeArticle) : []))
+      .catch(() => setArticles([]))
+      .finally(() => setLoading(false));
   }, [params?.category, params?.featured, params?.limit, params?.sort, params?.q, params?.status, params?.tag]);
 
   return { articles, loading };
 }
 
 export function useChroniques() {
-  const [chroniques, setChroniques] = useState<any[]>([]);
+  const [chroniques, setChroniques] = useState<Chronique[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch('/api/chroniques', { cache: 'no-store' })
       .then(res => res.json())
-      .then(data => {
-        setChroniques(data);
-        setLoading(false);
-      });
+      .then((data: Chronique[]) => setChroniques(Array.isArray(data) ? data.map(normalizeArticle) : []))
+      .catch(() => setChroniques([]))
+      .finally(() => setLoading(false));
   }, []);
 
   return { chroniques, loading };

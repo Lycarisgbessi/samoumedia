@@ -13,7 +13,17 @@ import { z } from 'zod';
 
 const prisma = new PrismaClient();
 const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
-const JWT_SECRET = process.env.JWT_SECRET || 'samou_media_super_secret_key_2026';
+const IS_SERVERLESS = !!process.env.VERCEL;
+
+// JWT_SECRET : obligatoire en production pour éviter qu'une clé par défaut connue
+// de tous permette de forger des tokens admin.
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET doit être défini en production (ex: chaîne aléatoire de 48+ caractères).');
+}
+const JWT_SECRET = process.env.JWT_SECRET || 'samou_media_dev_only_secret_key';
+if (!process.env.JWT_SECRET) {
+  console.warn('ATTENTION : JWT_SECRET non défini, utilisation d\'une clé de développement. Ne jamais déployer ainsi.');
+}
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -21,7 +31,12 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+// En serverless (Vercel), le système de fichiers est en lecture seule :
+// toute tentative de mkdir/écriture au démarrage fait planter la fonction
+// (FUNCTION_INVOCATION_FAILED). On ne crée le dossier qu'en local.
+if (!IS_SERVERLESS && !fs.existsSync(UPLOADS_DIR)) {
+  try { fs.mkdirSync(UPLOADS_DIR, { recursive: true }); } catch (err) { }
+}
 
 const deleteImageFile = async (imageUrl: string) => {
   if (!imageUrl) return;
@@ -43,7 +58,8 @@ if (process.env.CLOUDINARY_CLOUD_NAME) {
     cloudinary: cloudinary,
     params: { folder: 'samou-media', allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'] } as any
   });
-} else {
+} else if (!IS_SERVERLESS) {
+  // Stockage disque possible uniquement en local (Vercel = lecture seule).
   storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, UPLOADS_DIR),
     filename: (req, file, cb) => {
@@ -83,12 +99,15 @@ const asyncHandler = (fn: any) => (req: any, res: any, next: any) =>
   Promise.resolve(fn(req, res, next)).catch(next);
 
 const generateSlug = (text: string) => {
-  return text.toString().toLowerCase()
+  return text.toString()
+    .normalize('NFD')                      // décompose les accents (É -> E + ́)
+    .replace(/[\u0300-\u036f]/g, '')       // supprime les diacritiques
+    .toLowerCase()
     .replace(/\s+/g, '-')
     .replace(/[^\w\-]+/g, '')
     .replace(/\-\-+/g, '-')
     .replace(/^-+/, '')
-    .replace(/-+$/, '') + '-' + Math.random().toString(36).substr(2, 5);
+    .replace(/-+$/, '') + '-' + Math.random().toString(36).slice(2, 7);
 };
 
 // Validation Schemas
@@ -131,6 +150,16 @@ const chroniqueSchema = z.object({
   tags: z.array(z.string()).optional().default([])
 });
 
+const siteConfigSchema = z.object({
+  name: z.string().min(1),
+  slogan: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  emails: z.array(z.string()).optional(),
+  socials: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
+  flashInfo: z.string().optional().nullable()
+});
+
 // Routes
 app.post('/api/login', loginLimiter, asyncHandler(async (req: any, res: any) => {
   const { username = 'admin', password } = req.body;
@@ -149,20 +178,28 @@ app.post('/api/upload', authenticateToken, asyncHandler(async (req: any, res: an
   try {
     const { image } = req.body;
     if (!image) return res.status(400).json({ error: 'No image provided' });
-    
-    if (process.env.CLOUDINARY_CLOUD_NAME) {
+
+    if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
       const result = await cloudinary.uploader.upload(image, {
         folder: 'samou-media',
         allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp']
       });
       return res.json({ url: result.secure_url });
-    } else {
-      const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
-      const buffer = Buffer.from(base64Data, 'base64');
-      const filename = Date.now() + '-upload.jpg';
-      fs.writeFileSync(path.join(UPLOADS_DIR, filename), buffer);
-      return res.json({ url: `/uploads/${filename}` });
     }
+
+    // Sans Cloudinary configuré : stockage disque possible uniquement en local.
+    if (IS_SERVERLESS) {
+      console.error('Upload refusé : CLOUDINARY_CLOUD_NAME / CLOUDINARY_API_KEY / CLOUDINARY_API_SECRET manquants côté serveur.');
+      return res.status(500).json({
+        error: 'Service d\'images non configuré : vérifiez les variables CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY et CLOUDINARY_API_SECRET.'
+      });
+    }
+
+    const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    const filename = Date.now() + '-upload.jpg';
+    fs.writeFileSync(path.join(UPLOADS_DIR, filename), buffer);
+    return res.json({ url: `/uploads/${filename}` });
   } catch (error: any) {
     console.error('Upload error:', error);
     res.status(500).json({ error: error.message || 'Upload failed', details: error });
@@ -175,10 +212,12 @@ app.get('/api/config', asyncHandler(async (req: any, res: any) => {
   res.json(config || {});
 }));
 app.put('/api/config', authenticateToken, asyncHandler(async (req: any, res: any) => {
+  // Validation stricte : empêche d'écrire des champs arbitraires en base.
+  const validData = siteConfigSchema.partial().parse(req.body);
   const config = await prisma.siteConfig.upsert({ 
     where: { id: 1 }, 
-    update: req.body,
-    create: { id: 1, name: 'SAMOU MEDIA', ...req.body }
+    update: validData,
+    create: { id: 1, name: validData.name || 'SAMOU MEDIA', ...validData }
   });
   res.json({ success: true, siteConfig: config });
 }));
@@ -225,6 +264,14 @@ app.get('/api/chroniques', asyncHandler(async (req: any, res: any) => {
   
   res.json(await prisma.chronique.findMany({ where, orderBy: { date: 'desc' } }));
 }));
+app.get('/api/chroniques/slug/:slug', asyncHandler(async (req: any, res: any) => {
+  const chronique = await prisma.chronique.findUnique({ where: { slug: req.params.slug } });
+  if (chronique && !chronique.isDeleted && chronique.status === 'PUBLISHED') {
+    await prisma.chronique.update({ where: { id: chronique.id }, data: { views: { increment: 1 } } });
+    chronique.views += 1;
+    res.json(chronique);
+  } else res.status(404).json({ error: 'Not found' });
+}));
 app.post('/api/chroniques', authenticateToken, asyncHandler(async (req: any, res: any) => {
   const validData = chroniqueSchema.parse(req.body);
   const slug = generateSlug(validData.title);
@@ -233,8 +280,13 @@ app.post('/api/chroniques', authenticateToken, asyncHandler(async (req: any, res
 }));
 app.put('/api/chroniques/:id', authenticateToken, asyncHandler(async (req: any, res: any) => {
   const validData = chroniqueSchema.partial().parse(req.body);
+  // Le slug n'est régénéré que si le titre a réellement changé,
+  // pour ne pas casser les liens déjà partagés à chaque sauvegarde.
   let slug = undefined;
-  if (validData.title) slug = generateSlug(validData.title);
+  if (validData.title) {
+    const current = await prisma.chronique.findUnique({ where: { id: req.params.id }, select: { title: true } });
+    if (current && current.title !== validData.title) slug = generateSlug(validData.title);
+  }
   await prisma.chronique.update({ where: { id: req.params.id }, data: { ...validData, slug } });
   res.json({ success: true });
 }));
@@ -331,8 +383,14 @@ app.post('/api/articles', authenticateToken, asyncHandler(async (req: any, res: 
 }));
 app.put('/api/articles/:id', authenticateToken, asyncHandler(async (req: any, res: any) => {
   const validData = articleSchema.partial().parse(req.body);
+  // Le slug n'est régénéré que si le titre a réellement changé,
+  // pour ne pas casser les liens déjà partagés à chaque sauvegarde
+  // (sinon un simple toggle "mis en avant" changeait l'URL de l'article).
   let slug = undefined;
-  if (validData.title) slug = generateSlug(validData.title);
+  if (validData.title) {
+    const current = await prisma.article.findUnique({ where: { id: req.params.id }, select: { title: true } });
+    if (current && current.title !== validData.title) slug = generateSlug(validData.title);
+  }
   await prisma.article.update({ where: { id: req.params.id }, data: { ...validData, slug } });
   res.json({ success: true });
 }));
@@ -396,6 +454,11 @@ if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   app.use(express.static(distPath, { index: false }));
   
   app.get('*', asyncHandler(async (req: any, res: any) => {
+    // Anti-cache : oblige le navigateur à revalider le HTML à chaque visite.
+    // Sans cet en-tête, les téléphones gardent l'ancienne page (et ses vieux
+    // assets) en cache même après un déploiement → "ça marche en local mais
+    // pas en prod". Les assets JS/CSS, eux, restent cacheables (noms hashés).
+    res.set('Cache-Control', 'public, max-age=0, must-revalidate');
     let html = fs.readFileSync(path.join(distPath, 'index.html'), 'utf8');
     const config = await prisma.siteConfig.findUnique({ where: { id: 1 } });
     const siteName = config?.name || 'SAMOU MÉDIA';
@@ -429,7 +492,12 @@ if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
     <meta property="twitter:description" content="${description}" />
     <meta property="twitter:image" content="${image}" />`;
     
-    html = html.replace('<title>SAMOU MÉDIA</title>', metaTags);
+    // On retire d'abord les métadonnées par défaut du index.html statique,
+    // puis on injecte celles de l'article (sinon balises description/og dupliquées).
+    html = html
+      .replace(/<meta name="description"[^>]*>/, '')
+      .replace(/<meta property="og:(title|description|type)"[^>]*>/g, '')
+      .replace('<title>SAMOU MÉDIA</title>', metaTags);
     res.send(html);
   }));
 }

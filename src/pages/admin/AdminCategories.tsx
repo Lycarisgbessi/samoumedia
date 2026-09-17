@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { Plus, Edit2, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import { authFetch } from '../../lib/auth';
 
@@ -42,7 +42,7 @@ export default function AdminCategories() {
     fetchCategories();
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const method = currentCat.id && categories.find(c => c.id === currentCat.id) ? 'PUT' : 'POST';
     const url = method === 'PUT' ? `/api/categories/${currentCat.id}` : '/api/categories';

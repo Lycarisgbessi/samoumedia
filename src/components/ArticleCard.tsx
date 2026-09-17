@@ -99,17 +99,21 @@ export default function ArticleCard({ article, featured, categoryName, compact, 
             {article.excerpt}
           </p>
         )}
-        <div className={`flex items-center gap-4 text-[11px] ${featured ? 'text-gray-300 md:text-gray-500' : 'text-gray-500'} font-bold uppercase tracking-widest`}>
-          <span className="text-brand-dark">{article.author}</span>
-          {featured && (
-            <>
-              <span className="hidden md:inline text-gray-300">•</span>
-              <span className="hidden md:inline">{dateStr}</span>
-              <span className="hidden md:inline text-gray-300">•</span>
-              <span className="hidden md:inline text-brand-red">{article.readTime} lecture</span>
-            </>
-          )}
-        </div>
+          <div className={`flex items-center gap-4 text-[11px] ${featured ? 'text-gray-300 md:text-gray-500' : 'text-gray-500'} font-bold uppercase tracking-widest`}>
+            <span className="text-brand-dark">{article.author}</span>
+            {featured && (
+              <>
+                <span className="hidden md:inline text-gray-300">•</span>
+                <span className="hidden md:inline">{dateStr}</span>
+                {article.readTime && (
+                  <>
+                    <span className="hidden md:inline text-gray-300">•</span>
+                    <span className="hidden md:inline text-brand-red">{article.readTime} lecture</span>
+                  </>
+                )}
+              </>
+            )}
+          </div>
       </div>
     </Link>
   );

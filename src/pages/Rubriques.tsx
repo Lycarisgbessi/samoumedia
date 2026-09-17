@@ -7,32 +7,34 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Reveal } from '../components/Reveal';
 
 export default function Rubriques() {
-  const { id } = useParams<{ id?: string }>();
+  // La route est /rubriques/:slug — on lit donc "slug" (et non "id").
+  const { slug } = useParams<{ slug?: string }>();
   const navigate = useNavigate();
   const { categories, loading: catLoading } = useCategories();
   const { articles, loading: artLoading } = useArticles();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Sync state with URL
-  const selectedCategory = id || null;
+  // Catégorie sélectionnée, résolue par son slug
+  const selectedCategory = slug ? categories.find(c => c.slug === slug) || null : null;
+  const selectedId = selectedCategory?.id || null;
 
   if (catLoading || artLoading) return <div className="min-h-screen p-20 flex justify-center items-center">
     <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="w-8 h-8 border-4 border-brand-red border-t-transparent rounded-full" />
   </div>;
 
   const activeCategories = categories.filter(c => c.isActive);
-  const activeCategoryName = selectedCategory 
-    ? categories.find(c => c.id === selectedCategory)?.name || 'Rubrique inconnue'
+  const activeCategoryName = selectedCategory
+    ? selectedCategory.name
     : 'Toutes les rubriques';
 
-  const displayedArticles = selectedCategory
-    ? articles.filter(a => a.categoryId === selectedCategory)
+  const displayedArticles = selectedId
+    ? articles.filter(a => a.categoryId === selectedId)
     : articles;
 
-  const handleSelect = (catId: string | null) => {
+  const handleSelect = (catSlug: string | null) => {
     setIsDropdownOpen(false);
-    if (catId) {
-      navigate(`/rubriques/${catId}`);
+    if (catSlug) {
+      navigate(`/rubriques/${catSlug}`);
     } else {
       navigate(`/rubriques`);
     }
@@ -78,15 +80,15 @@ export default function Rubriques() {
               >
                 <button
                   onClick={() => handleSelect(null)}
-                  className={`px-5 py-3.5 text-left text-sm font-semibold uppercase tracking-wider hover:bg-gray-50 transition-colors ${!selectedCategory ? 'text-brand-red bg-red-50/50' : 'text-gray-700'}`}
+                  className={`px-5 py-3.5 text-left text-sm font-semibold uppercase tracking-wider hover:bg-gray-50 transition-colors ${!selectedId ? 'text-brand-red bg-red-50/50' : 'text-gray-700'}`}
                 >
                   Toutes les rubriques
                 </button>
                 {activeCategories.map(cat => (
                   <button
                     key={cat.id}
-                    onClick={() => handleSelect(cat.id)}
-                    className={`px-5 py-3.5 text-left text-sm font-semibold uppercase tracking-wider hover:bg-gray-50 transition-colors border-t border-gray-100 ${selectedCategory === cat.id ? 'text-brand-red bg-red-50/50' : 'text-gray-700'}`}
+                    onClick={() => handleSelect(cat.slug)}
+                    className={`px-5 py-3.5 text-left text-sm font-semibold uppercase tracking-wider hover:bg-gray-50 transition-colors border-t border-gray-100 ${selectedId === cat.id ? 'text-brand-red bg-red-50/50' : 'text-gray-700'}`}
                   >
                     {cat.name}
                   </button>

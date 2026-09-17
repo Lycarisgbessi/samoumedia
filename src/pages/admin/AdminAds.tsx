@@ -3,6 +3,15 @@ import { Edit2, Trash2, Plus, X, Search, Save, Power, CheckCircle, XCircle } fro
 import { authFetch } from '../../lib/auth';
 import { compressImage } from '../../utils/imageCompression';
 
+const LOCATION_LABELS: Record<string, string> = {
+  header: 'En-tête du site',
+  home: "Page d'accueil",
+  article: 'Dans les articles',
+  sidebar: 'Colonne latérale',
+  popup: 'Pop-up flottant',
+  '': 'Sans préférence (tous les emplacements du même format)',
+};
+
 export default function AdminAds() {
   const [ads, setAds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,8 +114,15 @@ export default function AdminAds() {
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-700">Emplacement (ID)</label>
-              <input type="text" required value={currentAd.location || ''} onChange={e => setCurrentAd({...currentAd, location: e.target.value})} className="w-full px-4 py-2 border rounded-lg" placeholder="ex: home_top, article_middle..." />
+              <label className="text-sm font-bold text-gray-700">Emplacement (où l'afficher en priorité)</label>
+              <select required value={currentAd.location || ''} onChange={e => setCurrentAd({...currentAd, location: e.target.value})} className="w-full px-4 py-2 border rounded-lg bg-white">
+                <option value="">Sans préférence (tous les emplacements du même format)</option>
+                <option value="header">En-tête du site (bannière sous le logo)</option>
+                <option value="home">Page d'accueil</option>
+                <option value="article">Dans les articles</option>
+                <option value="sidebar">Colonne latérale</option>
+                <option value="popup">Pop-up flottant</option>
+              </select>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-bold text-gray-700">Image</label>
@@ -139,63 +155,77 @@ export default function AdminAds() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h1 className="text-3xl font-serif font-black text-gray-900">Espaces Publicitaires</h1>
-        <button 
-          onClick={() => { setCurrentAd({ format: 'horizontal', location: '', isActive: true }); setIsEditing(true); }}
+        <button
+          onClick={() => { setCurrentAd({ format: 'horizontal', location: 'header', isActive: true }); setIsEditing(true); }}
           className="flex items-center gap-2 bg-brand-red text-white px-4 py-2 rounded-lg font-bold hover:bg-red-700 transition-colors"
         >
           <Plus size={18} />
-          Nouvel Espace
+          Nouvelle Publicité
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-gray-50 border-b border-gray-100 hidden md:table-header-group">
-            <tr>
-              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Nom</th>
-              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Format</th>
-              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Aperçu</th>
-              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Statut</th>
-              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 block md:table-row-group">
-            {ads.map((ad) => (
-              <tr key={ad.id} className="hover:bg-gray-50/50 transition-colors block md:table-row border-b md:border-b-0 p-4 md:p-0">
-                <td className="md:px-6 md:py-4 font-medium text-gray-900 block md:table-cell mb-4 md:mb-0">
-                  <div className="md:hidden text-xs text-gray-400 font-bold uppercase mb-1">Nom</div>
-                  {ad.name}
-                  <span className="block text-xs text-gray-500 font-mono mt-1">{ad.location}</span>
-                </td>
-                <td className="md:px-6 md:py-4 text-sm text-gray-600 capitalize block md:table-cell mb-2 md:mb-0">
-                  <div className="md:hidden text-xs text-gray-400 font-bold uppercase mb-1">Format</div>
-                  {ad.format}
-                </td>
-                <td className="md:px-6 md:py-4 block md:table-cell mb-4 md:mb-0">
-                  <div className="md:hidden text-xs text-gray-400 font-bold uppercase mb-1">Aperçu</div>
-                  <div className="h-10 w-20 bg-gray-200 rounded overflow-hidden">
-                    {ad.imageUrl && <img onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Crect fill='%23f3f4f6' width='800' height='600'/%3E%3Ctext fill='%239ca3af' font-family='sans-serif' font-size='30' dy='10.5' font-weight='bold' x='50%25' y='50%25' text-anchor='middle'%3ESAMOU MEDIA%3C/text%3E%3C/svg%3E"; }} src={ad.imageUrl} alt="Ad" className="w-full h-full object-cover" />}
-                  </div>
-                </td>
-                <td className="md:px-6 md:py-4 block md:table-cell mb-4 md:mb-0">
-                  <div className="md:hidden text-xs text-gray-400 font-bold uppercase mb-1">Statut</div>
-                  <button onClick={() => handleToggleActive(ad)} className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full w-max ${ad.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    {ad.isActive ? <CheckCircle size={14} /> : <XCircle size={14} />}
-                    {ad.isActive ? 'Actif' : 'Inactif'}
-                  </button>
-                </td>
-                <td className="md:px-6 md:py-4 text-left md:text-right block md:table-cell">
-                  <div className="flex justify-end gap-2 bg-gray-50 md:bg-transparent -mx-4 -mb-4 p-4 md:m-0 md:p-0 border-t md:border-none">
-                    <button onClick={() => handleEdit(ad)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors bg-white md:bg-transparent shadow-sm md:shadow-none"><Edit2 size={18} /></button>
-                    <button onClick={() => handleDelete(ad.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors bg-white md:bg-transparent shadow-sm md:shadow-none"><Trash2 size={18} /></button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Guide */}
+      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6 text-sm text-blue-900 space-y-1">
+        <p className="font-bold">Comment fonctionne la publicité sur le site ?</p>
+        <p>• Chaque <strong>format</strong> correspond à une forme d'emplacement : <strong>Horizontal</strong> (bannières larges), <strong>Vertical</strong> (colonnes latérales), <strong>Carré</strong>, <strong>Dans l'article</strong>, <strong>Pop-up</strong> (fenêtre flottante après 12 s).</p>
+        <p>• L'<strong>emplacement</strong> précise où la publicité apparaît en priorité. Une publicité <em>générale</em> (Sans préférence) peut apparaître dans tous les emplacements de son format.</p>
+        <p>• Un emplacement affiche « Votre publicité ici » tant qu'<strong>aucune publicité active</strong> ne correspond à son format. Désactivez ou supprimez une publicité pour la retirer du site.</p>
+      </div>
+
+      {/* Liste en cartes (responsive, actions visibles sur mobile) */}
+      <div className="grid grid-cols-1 gap-4">
+        {ads.map((ad) => (
+          <div key={ad.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+            <div className="h-16 w-28 bg-gray-100 rounded-lg overflow-hidden shrink-0">
+              {ad.imageUrl && (
+                <img
+                  onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Crect fill='%23f3f4f6' width='800' height='600'/%3E%3Ctext fill='%239ca3af' font-family='sans-serif' font-size='30' dy='10.5' font-weight='bold' x='50%25' y='50%25' text-anchor='middle'%3ESAMOU MEDIA%3C/text%3E%3C/svg%3E"; }}
+                  src={ad.imageUrl}
+                  alt={ad.name}
+                  className="w-full h-full object-cover"
+                />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-gray-900">{ad.name}</div>
+              <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-x-3">
+                <span className="capitalize">Format : {ad.format}</span>
+                <span>•</span>
+                <span>Emplacement : {LOCATION_LABELS[ad.location] || ad.location}</span>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 shrink-0">
+              <button
+                onClick={() => handleToggleActive(ad)}
+                className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg border transition-colors ${ad.isActive ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}
+              >
+                {ad.isActive ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                {ad.isActive ? 'Actif' : 'Inactif'}
+              </button>
+              <button
+                onClick={() => handleEdit(ad)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border border-blue-200 text-blue-700 hover:bg-blue-50 transition-colors"
+              >
+                <Edit2 size={14} />
+                Modifier
+              </button>
+              <button
+                onClick={() => handleDelete(ad.id)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border border-red-200 text-red-700 hover:bg-red-50 transition-colors"
+              >
+                <Trash2 size={14} />
+                Supprimer
+              </button>
+            </div>
+          </div>
+        ))}
+        {ads.length === 0 && (
+          <div className="bg-white rounded-xl border border-gray-100 p-10 text-center text-gray-500">
+            Aucune publicité pour le moment. Cliquez sur « Nouvelle Publicité » pour créer la première — elle remplacera les emplacements « Votre publicité ici » du site.
+          </div>
+        )}
       </div>
     </div>
   );

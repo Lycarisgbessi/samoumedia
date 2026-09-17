@@ -1,28 +1,42 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Search, Menu, Home } from 'lucide-react';
-import { useCategories, useConfig } from '../lib/hooks';
+import { useArticles, useCategories, useConfig } from '../lib/hooks';
+import { AdSpace } from './AdSpace';
 import { motion, AnimatePresence } from 'motion/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 
 export default function Header() {
   const { categories } = useCategories();
   const { config } = useConfig();
+  const { articles } = useArticles({ limit: 6 });
   const activeCategories = categories.filter(c => c.isActive);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     setIsMenuOpen(false);
   }, [location.pathname]);
 
-  const NavLink = ({ to, children }: { to: string, children: React.ReactNode }) => {
-    const isActive = location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
-    return (
-      <Link to={to} className="relative block py-3 px-3 text-[13px] font-bold uppercase whitespace-nowrap text-white hover:text-brand-yellow transition-colors">
-        {children}
-      </Link>
-    );
+  // Recherche : navigation vers la page de résultats /recherche?q=...
+  const handleSearch = (e: FormEvent) => {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (q) navigate(`/recherche?q=${encodeURIComponent(q)}`);
   };
+
+  // Alimentation du FLASH INFO :
+  // 1. message personnalisé défini dans l'admin (Réglages) s'il existe ;
+  // 2. sinon, les titres des derniers articles publiés ;
+  // 3. sinon, le slogan du site.
+  const flashInfoText = (config?.flashInfo || '').trim() ||
+    articles.map(a => a.title).filter(Boolean).join('  •  ') ||
+    config?.slogan ||
+    'Informer. Éclairer. Rassembler.';
+
+  // Style commun des liens de navigation (le soulignement actif sera géré plus tard si besoin)
+  const navLinkClass = "relative block py-3 px-3 text-[13px] font-bold uppercase whitespace-nowrap text-white hover:text-brand-yellow transition-colors";
 
   return (
     <header className="w-full bg-white flex flex-col z-50 relative">
@@ -35,9 +49,9 @@ export default function Header() {
           <motion.div
             className="absolute whitespace-nowrap text-sm font-medium"
             animate={{ x: ['100%', '-100%'] }}
-            transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
+            transition={{ duration: 45, repeat: Infinity, ease: 'linear' }}
           >
-            Guinée : le Président nomme 20 ministres ce lundi • Les prix des denrées en baisse dans les marchés de Conakry • Lancement des travaux de bitumage de l'axe Forécariah - Samou Benty
+            {flashInfoText}
           </motion.div>
         </div>
         <div className="hidden md:flex items-center gap-4 shrink-0 text-xs font-bold uppercase ml-4">
@@ -57,33 +71,34 @@ export default function Header() {
         <Link to="/" className="flex items-center shrink-0">
           <img src="/logo.jpg" alt="SAMOU MEDIA" className="w-16 h-16 object-contain mr-3" />
           <div className="flex flex-col justify-center">
-            <div className="text-4xl font-sans font-black tracking-tighter leading-none text-brand-red">
+            <div className="text-3xl sm:text-4xl font-sans font-black tracking-tighter leading-none text-brand-red">
               SAMOU MÉDIA
             </div>
-            <span className="text-xs font-medium text-gray-700 italic mt-1">
+            <span className="hidden sm:block text-xs font-medium text-gray-700 italic mt-1">
               La voix de Samou, le regard sur le monde
             </span>
           </div>
         </Link>
 
-        {/* Ad Banner */}
+        {/* Bannière publicitaire gérée depuis l'admin (Publicités → format Horizontal, emplacement En-tête) */}
         <div className="hidden lg:flex flex-1 justify-center px-4">
-          <div className="bg-brand-blue w-full max-w-[728px] h-[90px] flex items-center justify-center text-white text-xl font-bold border border-gray-200">
-            Votre publicité ici
-          </div>
+          <AdSpace format="horizontal" location="header" />
         </div>
 
         {/* Search Bar */}
-        <div className="hidden md:flex relative w-64 shrink-0">
-          <input 
-            type="text" 
-            placeholder="Recherche..." 
+        <form onSubmit={handleSearch} className="hidden md:flex relative w-64 shrink-0">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Recherche..."
+            aria-label="Rechercher un article"
             className="w-full pl-4 pr-10 py-2 border border-gray-300 bg-gray-50 focus:outline-none focus:border-brand-red text-sm"
           />
-          <button className="absolute right-0 top-0 h-full px-3 text-white bg-brand-red">
+          <button type="submit" className="absolute right-0 top-0 h-full px-3 text-white bg-brand-red" title="Rechercher">
             <Search size={18} />
           </button>
-        </div>
+        </form>
         
         {/* Mobile menu toggle */}
         <button 
@@ -104,9 +119,9 @@ export default function Header() {
 
           <div className="hidden lg:flex items-center flex-1 overflow-x-auto overflow-y-hidden hide-scrollbar px-2">
             {activeCategories.map(cat => (
-              <NavLink key={cat.id} to={`/rubriques/${cat.slug}`}>
+              <Link key={cat.id} to={`/rubriques/${cat.slug}`} className={navLinkClass}>
                 {cat.name}
-              </NavLink>
+              </Link>
             ))}
           </div>
 

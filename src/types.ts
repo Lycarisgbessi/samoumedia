@@ -44,6 +44,7 @@ export interface Article {
 }
 
 export interface SiteConfig {
+  id?: number;
   name: string;
   slogan: string;
   address: string;
@@ -56,4 +57,14 @@ export interface SiteConfig {
     tiktok?: string;
     whatsapp?: string;
   };
+}
+
+export interface Ad {
+  id: string;
+  name: string;
+  format: string;
+  location: string;
+  isActive: boolean;
+  imageUrl?: string | null;
+  targetUrl?: string | null;
 }

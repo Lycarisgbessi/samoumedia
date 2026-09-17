@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap');
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 @theme {
   --font-sans: "Roboto", ui-sans-serif, system-ui, sans-serif;
@@ -20,4 +21,41 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-sans font-bold tracking-tight text-brand-dark;
   }
+}
+
+/* Garde anti-débordement : aucun scroll horizontal possible, quel que soit le
+   contenu. "clip" ne casse pas position:sticky (contrairement à "hidden"). */
+html, body {
+  overflow-x: clip;
+}
+
+/*
+ * Contenu riche (articles / chroniques depuis l'éditeur Quill) :
+ * garde-fous responsive — aucun élément ne doit dépasser l'écran sur mobile.
+ */
+.article-content {
+  /* Césure française automatique : les mots restent entiers, et les mots
+     longs se coupent aux bonnes syllabes avec un tiret (lang="fr" requis). */
+  -webkit-hyphens: auto;
+  hyphens: auto;
+  /* Ne casse un mot QUE s'il dépasse à lui seul toute la largeur de la
+     ligne (URL très longue). Jamais au milieu d'un mot qui pourrait tenir. */
+  overflow-wrap: break-word;
+}
+
+.article-content img,
+.article-content video,
+.article-content iframe {
+  max-width: 100%;
+  height: auto;
+}
+
+.article-content table {
+  display: block;
+  width: 100%;
+  overflow-x: auto; /* les tableaux larges défilent horizontalement au lieu de casser la page */
+}
+
+.article-content a {
+  overflow-wrap: anywhere; /* les longues URLs peuvent se couper n'importe où */
 }

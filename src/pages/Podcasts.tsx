@@ -2,6 +2,7 @@ import { Play, Clock, Calendar, Headphones } from 'lucide-react';
 import { Reveal } from '../components/Reveal';
 import { motion } from 'motion/react';
 import { AdSpace } from '../components/AdSpace';
+import { FALLBACK_IMAGE, onImageError } from '../lib/media';
 
 const PODCASTS = [
   {
@@ -11,7 +12,7 @@ const PODCASTS = [
     duration: "45:20",
     date: "12 Mai 2025",
     category: "Politique",
-    image: "https://picsum.photos/seed/samou19/800/600",
+    image: FALLBACK_IMAGE,
   },
   {
     id: 2,
@@ -20,7 +21,7 @@ const PODCASTS = [
     duration: "32:15",
     date: "05 Mai 2025",
     category: "Économie",
-    image: "https://picsum.photos/seed/samou20/800/600",
+    image: FALLBACK_IMAGE,
   },
   {
     id: 3,
@@ -29,7 +30,7 @@ const PODCASTS = [
     duration: "50:05",
     date: "28 Avril 2025",
     category: "Société",
-    image: "https://picsum.photos/seed/samou21/800/600",
+    image: FALLBACK_IMAGE,
   },
   {
     id: 4,
@@ -38,23 +39,25 @@ const PODCASTS = [
     duration: "28:40",
     date: "15 Avril 2025",
     category: "Culture",
-    image: "https://picsum.photos/seed/samou22/800/600",
+    image: FALLBACK_IMAGE,
   },
   {
     id: 5,
-    title: "Le journal des sports: Retour sur le week-end",
+    title: "Le journal des sports : Retour sur le week-end",
+    description: "Toute l'actualité sportive du week-end en Guinée et dans la région.",
     duration: "18:45",
     date: "10 Avril 2025",
     category: "Sport",
-    image: "https://picsum.photos/seed/samou21_b/800/600",
+    image: FALLBACK_IMAGE,
   },
   {
     id: 6,
     title: "Analyse : Les défis de l'éducation en zone rurale",
+    description: "Éclairage sur les obstacles à la scolarisation dans les zones rurales et les pistes de solution.",
     duration: "42:10",
     date: "02 Avril 2025",
     category: "Éducation",
-    image: "https://picsum.photos/seed/samou22_b/800/600",
+    image: FALLBACK_IMAGE,
   }
 ];
 
@@ -87,12 +90,13 @@ export default function Podcasts() {
       <Reveal delay={0.1}>
         <div className="bg-brand-dark rounded-2xl overflow-hidden shadow-2xl mb-20 flex flex-col md:flex-row text-white group">
           <div className="md:w-5/12 relative overflow-hidden">
-            <motion.img 
-              src={PODCASTS[0].image} 
-              alt={PODCASTS[0].title} 
+            <motion.img
+              src={PODCASTS[0].image}
+              onError={onImageError}
+              alt={PODCASTS[0].title}
               className="w-full h-full object-cover min-h-[350px] opacity-90"
               whileHover={{ scale: 1.05 }}
-              transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }} 
+              transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-transparent to-transparent md:bg-gradient-to-r" />
             <div className="absolute inset-0 flex items-center justify-center">
@@ -121,7 +125,7 @@ export default function Podcasts() {
               <Reveal key={podcast.id} delay={0.1 * index}>
                 <div className="bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-xl transition-all duration-500 p-6 flex flex-col group h-full">
                   <div className="relative aspect-video rounded-lg overflow-hidden mb-6 bg-gray-100">
-                    <img onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Crect fill='%23f3f4f6' width='800' height='600'/%3E%3Ctext fill='%239ca3af' font-family='sans-serif' font-size='30' dy='10.5' font-weight='bold' x='50%25' y='50%25' text-anchor='middle'%3ESAMOU MEDIA%3C/text%3E%3C/svg%3E"; }} src={podcast.image} alt={podcast.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
+                    <img onError={onImageError} src={podcast.image} alt={podcast.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-500 flex items-center justify-center">
                       <button className="w-16 h-16 bg-brand-yellow text-brand-dark rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 transform scale-50 group-hover:scale-100 shadow-xl">
                         <Play className="w-6 h-6 ml-1 fill-brand-dark" />

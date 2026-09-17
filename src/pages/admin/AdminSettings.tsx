@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { Save } from 'lucide-react';
 import { authFetch } from '../../lib/auth';
 
@@ -9,7 +9,8 @@ export default function AdminSettings() {
     address: '',
     phone: '',
     emails: [],
-    socials: {}
+    socials: {},
+    flashInfo: ''
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -19,12 +20,24 @@ export default function AdminSettings() {
     authFetch('/api/config')
       .then(res => res.json())
       .then(data => {
-        setConfig(data);
+        // Fusion avec les défauts : l'API renvoie {} si aucune config n'existe encore,
+        // ce qui rendrait des champs undefined et casserait les inputs contrôlés.
+        setConfig({
+          name: '',
+          slogan: '',
+          address: '',
+          phone: '',
+          emails: [],
+          flashInfo: '',
+          ...data,
+          socials: { ...(data?.socials || {}) }
+        });
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setMessage('');
     setSaving(true);
@@ -91,7 +104,22 @@ export default function AdminSettings() {
               />
             </div>
             
-            {/* Socials */}
+            {/* Flash Info */}
+          <div className="space-y-2 md:col-span-2">
+            <label className="text-sm font-bold text-gray-700 uppercase tracking-wide">Flash Info (bandeau rouge défilant en haut du site)</label>
+            <textarea
+              rows={3}
+              value={config.flashInfo || ''}
+              onChange={(e) => setConfig({...config, flashInfo: e.target.value})}
+              placeholder="Laissez vide pour que les titres des derniers articles publiés défilent automatiquement. Sinon, écrivez vos messages séparés par •"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-red focus:border-transparent transition-all"
+            />
+            <p className="text-xs text-gray-400">
+              Si ce champ est rempli, ces messages remplacent les titres automatiques. Plusieurs messages : séparez-les par •
+            </p>
+          </div>
+
+          {/* Socials */}
             <div className="space-y-2">
               <label className="text-sm font-bold text-gray-700 uppercase tracking-wide">Facebook (URL)</label>
               <input 
