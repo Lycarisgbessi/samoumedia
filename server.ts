@@ -70,7 +70,8 @@ const authenticateToken = (req: express.Request, res: express.Response, next: ex
 
 const app = express();
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -144,11 +145,29 @@ app.post('/api/login', loginLimiter, asyncHandler(async (req: any, res: any) => 
 
 app.get('/api/verify', authenticateToken, (req, res) => res.json({ success: true }));
 
-app.post('/api/upload', authenticateToken, upload.single('image'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  const url = process.env.CLOUDINARY_CLOUD_NAME ? req.file.path : `/uploads/${req.file.filename}`;
-  res.json({ url });
-});
+app.post('/api/upload', authenticateToken, asyncHandler(async (req: any, res: any) => {
+  try {
+    const { image } = req.body;
+    if (!image) return res.status(400).json({ error: 'No image provided' });
+    
+    if (process.env.CLOUDINARY_CLOUD_NAME) {
+      const result = await cloudinary.uploader.upload(image, {
+        folder: 'samou-media',
+        allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp']
+      });
+      return res.json({ url: result.secure_url });
+    } else {
+      const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
+      const filename = Date.now() + '-upload.jpg';
+      fs.writeFileSync(path.join(UPLOADS_DIR, filename), buffer);
+      return res.json({ url: `/uploads/${filename}` });
+    }
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({ error: 'Upload failed' });
+  }
+}));
 
 // Config
 app.get('/api/config', asyncHandler(async (req: any, res: any) => {

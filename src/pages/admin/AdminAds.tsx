@@ -37,22 +37,27 @@ export default function AdminAds() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append('image', file);
-
-    try {
-      const res = await authFetch('/api/upload', {
-        method: 'POST',
-        body: formData
-      });
-      const data = await res.json();
-      if (data.url) {
-        setCurrentAd({...currentAd, imageUrl: data.url});
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      try {
+        const base64Image = reader.result;
+        const res = await authFetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: base64Image })
+        });
+        const data = await res.json();
+        if (data.url) {
+          setCurrentAd(prev => ({...prev, imageUrl: data.url}));
+        } else {
+          alert('Erreur: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Erreur lors de l\'upload:', error);
+        alert("Erreur lors du téléchargement de l'image");
       }
-    } catch (error) {
-      console.error('Erreur lors de l\'upload:', error);
-      alert("Erreur lors du téléchargement de l'image");
-    }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleToggleActive = async (ad: any) => {
