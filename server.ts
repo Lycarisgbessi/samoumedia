@@ -92,22 +92,6 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// CORS : autorise le miroir de traduction Google (*.translate.goog) à appeler
-// l'API du vrai domaine — sinon le site traduit n'afficherait aucun article.
-app.use((req, res, next) => {
-  const origin = req.headers.origin as string | undefined;
-  if (origin && origin.endsWith('.translate.goog')) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    if (req.method === 'OPTIONS') {
-      res.sendStatus(204);
-      return;
-    }
-  }
-  next();
-});
-
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -248,7 +232,32 @@ app.put('/api/config', authenticateToken, asyncHandler(async (req: any, res: any
 
 // Categories
 app.get('/api/categories', asyncHandler(async (req: any, res: any) => {
-  res.json(await prisma.category.findMany({ orderBy: { order: 'asc' } }));
+  const categories = await prisma.category.findMany({ orderBy: { order: 'asc' } });
+  // Traduction des noms de rubriques (?lang=...), mise en cache
+  const lang = req.query.lang as string;
+  if (lang && SUPPORTED_LANGS[lang]) {
+    const toTranslate: { idx: number; name: string }[] = [];
+    categories.forEach((cat: any, idx: number) => {
+      const cached = cat.translations?.[lang]?.name;
+      if (cached) cat.name = cached;
+      else toTranslate.push({ idx, name: cat.name });
+    });
+    if (toTranslate.length) {
+      const results = await translateTexts(toTranslate.map(t => t.name), lang);
+      if (results) {
+        toTranslate.forEach((t, i) => {
+          const name = results[i] || t.name;
+          categories[t.idx].name = name;
+          categories[t.idx].translations = { ...((categories[t.idx].translations as any) || {}), [lang]: { name } };
+          prisma.category.update({
+            where: { id: categories[t.idx].id },
+            data: { translations: categories[t.idx].translations }
+          }).catch(() => { });
+        });
+      }
+    }
+  }
+  res.json(categories);
 }));
 app.post('/api/categories', authenticateToken, asyncHandler(async (req: any, res: any) => {
   const validData = categorySchema.parse(req.body);
@@ -279,20 +288,83 @@ app.delete('/api/categories/:id', authenticateToken, asyncHandler(async (req: an
 app.get('/api/chroniques', asyncHandler(async (req: any, res: any) => {
   const { status, trash } = req.query;
   const where: any = { isDeleted: trash === 'true' };
-  
+
   if (status && status !== 'all') {
     where.status = status;
   } else if (!status) {
     where.status = 'PUBLISHED';
   }
-  
-  res.json(await prisma.chronique.findMany({ where, orderBy: { date: 'desc' } }));
+
+  const chroniques = await prisma.chronique.findMany({ where, orderBy: { date: 'desc' } });
+
+  // Traduction des titres/extraits (?lang=...), mise en cache
+  const lang = req.query.lang as string;
+  if (lang && SUPPORTED_LANGS[lang] && chroniques.length) {
+    const toTranslate: { idx: number; title: string; excerpt: string }[] = [];
+    chroniques.forEach((c: any, idx: number) => {
+      const cached = c.translations?.[lang];
+      if (cached?.title) {
+        c.title = cached.title;
+        if (cached.excerpt) c.excerpt = cached.excerpt;
+      } else {
+        toTranslate.push({ idx, title: c.title || '', excerpt: c.excerpt || '' });
+      }
+    });
+    if (toTranslate.length) {
+      const flat: string[] = [];
+      toTranslate.forEach(t => { flat.push(t.title); if (t.excerpt) flat.push(t.excerpt); });
+      const results = await translateTexts(flat, lang);
+      if (results) {
+        let r = 0;
+        for (const t of toTranslate) {
+          const title = results[r++] || t.title;
+          const excerpt = t.excerpt ? (results[r++] || t.excerpt) : undefined;
+          chroniques[t.idx].title = title;
+          if (excerpt !== undefined) chroniques[t.idx].excerpt = excerpt;
+          chroniques[t.idx].translations = { ...((chroniques[t.idx].translations as any) || {}), [lang]: { title, excerpt } };
+          prisma.chronique.update({
+            where: { id: chroniques[t.idx].id },
+            data: { translations: chroniques[t.idx].translations }
+          }).catch(() => { });
+        }
+      }
+    }
+  }
+
+  res.json(chroniques);
 }));
 app.get('/api/chroniques/slug/:slug', asyncHandler(async (req: any, res: any) => {
   const chronique = await prisma.chronique.findUnique({ where: { slug: req.params.slug } });
   if (chronique && !chronique.isDeleted && chronique.status === 'PUBLISHED') {
     await prisma.chronique.update({ where: { id: chronique.id }, data: { views: { increment: 1 } } });
     chronique.views += 1;
+
+    // Traduction complète à la demande (?lang=...), mise en cache
+    const lang = req.query.lang as string;
+    if (lang && SUPPORTED_LANGS[lang]) {
+      const cached = (chronique.translations as any)?.[lang];
+      if (cached?.content) {
+        return res.json({ ...chronique, title: cached.title, excerpt: cached.excerpt, content: cached.content, translated: true });
+      }
+      const results = await translateTexts(
+        [chronique.title || '', chronique.excerpt || '', chronique.content || ''].filter(Boolean),
+        lang
+      );
+      if (results && results.some(r => r)) {
+        let i = 0;
+        const translation = {
+          title: chronique.title ? (results[i++] || chronique.title) : chronique.title,
+          excerpt: chronique.excerpt ? (results[i++] || chronique.excerpt) : chronique.excerpt,
+          content: chronique.content ? (results[i++] || chronique.content) : chronique.content
+        };
+        await prisma.chronique.update({
+          where: { id: chronique.id },
+          data: { translations: { ...(chronique.translations as any || {}), [lang]: translation } }
+        }).catch(() => { });
+        return res.json({ ...chronique, ...translation, translated: true });
+      }
+    }
+
     res.json(chronique);
   } else res.status(404).json({ error: 'Not found' });
 }));
@@ -392,7 +464,14 @@ app.get('/api/articles', asyncHandler(async (req: any, res: any) => {
     }
   }
   const orderBy: any = sort === 'views' ? { views: 'desc' } : { date: 'desc' };
-  res.json(await prisma.article.findMany({ where, orderBy, take: limit ? parseInt(limit as string, 10) : undefined }));
+  const articles = await prisma.article.findMany({ where, orderBy, take: limit ? parseInt(limit as string, 10) : undefined });
+  // Traduction des titres/extraits visibles (?lang=...), mise en cache.
+  // (Requêtes admin : pas de traduction.)
+  const lang = req.query.lang as string;
+  if (lang && SUPPORTED_LANGS[lang] && where.status === 'PUBLISHED') {
+    await translateArticleList(articles, lang);
+  }
+  res.json(articles);
 }));
 app.get('/api/articles/:id', asyncHandler(async (req: any, res: any) => {
   const article = await prisma.article.findUnique({ where: { id: req.params.id } });
@@ -400,21 +479,47 @@ app.get('/api/articles/:id', asyncHandler(async (req: any, res: any) => {
     res.json(article);
   } else res.status(404).json({ error: 'Not found' });
 }));
-// ─── Traduction automatique (articles) ──────────────────────────
-// Chaîne de fournisseurs : Gemini (si GEMINI_API_KEY) → MyMemory (gratuit sans clé).
-// Les traductions sont mises en cache dans Article.translations.
+// ─── Moteur de traduction ───────────────────────────────────────
+// Fournisseurs (par ordre de qualité) : DeepL → Gemini → MyMemory.
+// Tout est mis en cache en base (translations Json) : chaque élément n'est
+// traduit qu'UNE seule fois par langue.
 
 const SUPPORTED_LANGS: Record<string, string> = {
-  en: 'anglais', es: 'espagnol', zh: 'chinois', ar: 'arabe', pt: 'portugais'
+  en: 'anglais', es: 'espagnol', 'zh-CN': 'chinois', ar: 'arabe', pt: 'portugais'
 };
+const DEEPL_CODES: Record<string, string> = { en: 'EN', es: 'ES', 'zh-CN': 'ZH', ar: 'AR', pt: 'PT' };
 
-async function translateWithGemini(texts: string[], targetLang: string): Promise<string[] | null> {
+async function translateWithDeepL(texts: string[], langCode: string, html: boolean): Promise<string[] | null> {
+  const key = process.env.DEEPL_API_KEY;
+  if (!key || !DEEPL_CODES[langCode]) return null;
+  const host = key.endsWith(':fx') ? 'https://api-free.deepl.com' : 'https://api.deepl.com';
+  try {
+    const res = await fetch(`${host}/v2/translate`, {
+      method: 'POST',
+      headers: { 'Authorization': `DeepL-Auth-Key ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: texts,
+        target_lang: DEEPL_CODES[langCode],
+        source_lang: 'FR',
+        ...(html ? { tag_handling: 'html', preserve_formatting: true } : {})
+      })
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as any;
+    const out = (data?.translations || []).map((t: any) => t.text);
+    return out.length === texts.length ? out : null;
+  } catch {
+    return null;
+  }
+}
+
+async function translateWithGemini(texts: string[], langName: string): Promise<string[] | null> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
   try {
     const { GoogleGenAI } = await import('@google/genai');
     const ai = new GoogleGenAI({ apiKey });
-    const prompt = `Traduis chaque bloc suivant en ${targetLang}, en conservant exactement la mise en forme HTML et les balises. Réponds UNIQUEMENT par les blocs traduits, séparés par la ligne "|||".\n\n${texts.join('\n|||\n')}`;
+    const prompt = `Traduis chaque bloc suivant en ${langName}, en conservant exactement la mise en forme HTML et les balises. Réponds UNIQUEMENT par les blocs traduits, séparés par la ligne "|||".\n\n${texts.join('\n|||\n')}`;
     const response = await ai.models.generateContent({
       model: 'gemini-2.0-flash',
       contents: prompt
@@ -439,34 +544,64 @@ async function translateWithMyMemory(text: string, target: string): Promise<stri
   }
 }
 
-/** Découpe le HTML en blocs (p, h1-h3, li) et traduit chaque texte intérieur. */
-async function translateHtml(html: string, langCode: string, langName: string): Promise<string | null> {
-  // 1. Tentative Gemini (traduit tout le HTML d'un coup, mise en forme conservée)
-  const viaGemini = await translateWithGemini([html], langName);
-  if (viaGemini && viaGemini[0]) return viaGemini[0];
+/** Traduit une liste de textes avec la chaîne de fournisseurs (retourne null si tout échoue). */
+async function translateTexts(texts: string[], langCode: string): Promise<string[] | null> {
+  if (texts.length === 0) return [];
+  const langName = SUPPORTED_LANGS[langCode];
+  if (!langName) return null;
 
-  // 2. Repli MyMemory : bloc par bloc, texte intérieur uniquement
-  const blocks = html.split(/(?=<\/?(?:p|h[1-3]|li)[>\s])/).filter(b => b.trim());
+  // 1. DeepL (meilleure qualité, HTML préservé)
+  const viaDeepL = await translateWithDeepL(texts, langCode, texts.some(t => /[<>]/.test(t)));
+  if (viaDeepL) return viaDeepL;
+
+  // 2. Gemini
+  const viaGemini = await translateWithGemini(texts, langName);
+  if (viaGemini) return viaGemini;
+
+  // 3. MyMemory (secours sans clé, texte par texte, non-HTML)
   const out: string[] = [];
-  for (const block of blocks) {
-    const m = block.match(/^(<[^>]+>)([\s\S]*?)(<\/[^>]+>)$/);
-    if (m) {
-      const inner = m[2].replace(/<[^>]+>/g, ' ').trim();
-      if (inner) {
-        const translated = await translateWithMyMemory(inner, langCode);
-        out.push(m[1] + (translated || inner) + m[3]);
-        continue;
-      }
-    }
-    const plain = block.replace(/<[^>]+>/g, ' ').trim();
-    if (plain) {
-      const translated = await translateWithMyMemory(plain, langCode);
-      out.push(translated || block);
-    } else {
-      out.push(block);
-    }
+  for (const text of texts) {
+    const plain = text.replace(/<[^>]+>/g, ' ').trim();
+    const translated = plain ? await translateWithMyMemory(plain, langCode) : null;
+    out.push(translated || text);
   }
-  return out.join('');
+  return out;
+}
+
+/** Traduit les champs visibles d'une liste d'articles, avec cache en base. */
+async function translateArticleList(items: any[], langCode: string) {
+  if (!items.length) return;
+  const toTranslate: { idx: number; title: string; excerpt: string }[] = [];
+  items.forEach((item, idx) => {
+    const cached = item.translations?.[langCode];
+    if (cached?.title) {
+      item.title = cached.title;
+      if (cached.excerpt) item.excerpt = cached.excerpt;
+    } else {
+      toTranslate.push({ idx, title: item.title || '', excerpt: item.excerpt || '' });
+    }
+  });
+  if (!toTranslate.length) return;
+
+  const flat: string[] = [];
+  toTranslate.forEach(t => { flat.push(t.title); if (t.excerpt) flat.push(t.excerpt); });
+  const results = await translateTexts(flat, langCode);
+  if (!results) return; // service indisponible → on sert le français
+
+  let r = 0;
+  for (const t of toTranslate) {
+    const title = results[r++] || t.title;
+    const excerpt = t.excerpt ? (results[r++] || t.excerpt) : undefined;
+    items[t.idx].title = title;
+    if (excerpt !== undefined) items[t.idx].excerpt = excerpt;
+    // Mise en cache (sans le contenu : traduit séparément à l'ouverture)
+    const item = items[t.idx];
+    item.translations = { ...(item.translations || {}), [langCode]: { title, excerpt } };
+    prisma.article.update({
+      where: { id: item.id },
+      data: { translations: item.translations }
+    }).catch(() => { });
+  }
 }
 
 app.get('/api/articles/slug/:slug', asyncHandler(async (req: any, res: any) => {
@@ -475,23 +610,23 @@ app.get('/api/articles/slug/:slug', asyncHandler(async (req: any, res: any) => {
     await prisma.article.update({ where: { id: article.id }, data: { views: { increment: 1 } } });
     article.views += 1;
 
-    // Traduction à la demande (?lang=en|es|zh|ar|pt), mise en cache
+    // Traduction complète à la demande (?lang=...), mise en cache
     const lang = req.query.lang as string;
     if (lang && SUPPORTED_LANGS[lang]) {
       const cached = (article.translations as any)?.[lang];
-      if (cached?.title) {
+      if (cached?.content) {
         return res.json({ ...article, title: cached.title, excerpt: cached.excerpt, content: cached.content, translated: true });
       }
-      const [title, excerpt, content] = await Promise.all([
-        translateWithMyMemory(article.title || '', lang) as Promise<string | null>,
-        translateWithMyMemory(article.excerpt || '', lang) as Promise<string | null>,
-        translateHtml(article.content || '', lang, SUPPORTED_LANGS[lang])
-      ]);
-      if (title || content) {
+      const results = await translateTexts(
+        [article.title || '', article.excerpt || '', article.content || ''].filter(Boolean),
+        lang
+      );
+      if (results && results.some(r => r)) {
+        let i = 0;
         const translation = {
-          title: title || article.title,
-          excerpt: excerpt || article.excerpt,
-          content: content || article.content
+          title: article.title ? (results[i++] || article.title) : article.title,
+          excerpt: article.excerpt ? (results[i++] || article.excerpt) : article.excerpt,
+          content: article.content ? (results[i++] || article.content) : article.content
         };
         await prisma.article.update({
           where: { id: article.id },

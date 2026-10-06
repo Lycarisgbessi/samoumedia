@@ -11,10 +11,13 @@ import DOMPurify from 'dompurify';
 import { useCategories } from '../lib/hooks';
 import { normalizeArticle } from '../lib/text';
 import { apiUrl } from '../lib/api';
+import { useI18n, useLang } from '../lib/lang';
 import { FALLBACK_IMAGE, getYouTubeId, getYouTubeThumb, onImageError } from '../lib/media';
 
 export default function ArticleView() {
   const { slug } = useParams<{ slug: string }>();
+  const lang = useLang();
+  const { t } = useI18n();
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -25,7 +28,7 @@ export default function ArticleView() {
 
   useEffect(() => {
     setLoading(true);
-    fetch(apiUrl(`/api/articles/slug/${slug}`), { cache: 'no-store' })
+    fetch(apiUrl(`/api/articles/slug/${slug}${lang !== 'fr' ? `?lang=${encodeURIComponent(lang)}` : ''}`), { cache: 'no-store' })
       .then(res => res.ok ? res.json() : Promise.reject())
       .then(data => {
         setArticle(normalizeArticle(data));
@@ -35,10 +38,10 @@ export default function ArticleView() {
         setArticle(null);
         setLoading(false);
       });
-  }, [slug]);
+  }, [slug, lang]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-brand-dark font-mono text-sm tracking-widest uppercase">Chargement en cours...</div>;
-  if (!article) return <div className="min-h-screen flex items-center justify-center text-brand-red font-mono text-sm tracking-widest uppercase">Article introuvable.</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-brand-dark font-mono text-sm tracking-widest uppercase">{t('loading')}</div>;
+  if (!article) return <div className="min-h-screen flex items-center justify-center text-brand-red font-mono text-sm tracking-widest uppercase">{t('articleNotFound')}</div>;
 
   const youtubeId = getYouTubeId(article.videoUrl);
   // Nom lisible de la rubrique (au lieu d'afficher l'identifiant brut en base)
@@ -128,7 +131,7 @@ export default function ArticleView() {
                 {article.readTime && (
                   <p className="text-xs text-gray-400 font-bold uppercase tracking-wider flex items-center gap-2 mt-1">
                     <Clock className="w-3.5 h-3.5" />
-                    {article.readTime} de lecture
+                    {article.readTime} {t('readingTime')}
                   </p>
                 )}
               </div>
@@ -136,7 +139,7 @@ export default function ArticleView() {
             <div className="flex gap-3">
               <button
                 onClick={handleShare}
-                title="Partager l'article"
+                title="{t('share')}"
                 className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:text-brand-red hover:border-brand-red hover:bg-brand-red/5 transition-all duration-300 group"
               >
                 {copied ? <Check className="w-4 h-4 text-green-600" /> : <Share2 className="w-4 h-4" />}
@@ -178,7 +181,7 @@ export default function ArticleView() {
 
             {article.tags && article.tags.length > 0 && (
               <div className="mt-12 pt-8 border-t border-gray-100 flex flex-wrap gap-2">
-                <span className="font-bold text-gray-500 mr-2 flex items-center">Tags :</span>
+                <span className="font-bold text-gray-500 mr-2 flex items-center">{t('tags')}</span>
                 {article.tags.map(tag => (
                   <a
                     href={`/?tag=${encodeURIComponent(tag)}`}

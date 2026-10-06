@@ -13,6 +13,7 @@ import { CustomCursor } from './components/CustomCursor';
 import { uiSound } from './lib/sound';
 import { PopupAd } from './components/PopupAd';
 import { trackPageView } from './lib/track';
+import { useI18n } from './lib/lang';
 
 // Scroll to top on route change
 function ScrollToTop() {
@@ -36,6 +37,8 @@ function Analytics() {
 
 export default function App() {
   const location = useLocation();
+  // Langue du site : direction de lecture (RTL arabe) gérée globalement
+  useI18n();
 
   useEffect(() => {
     const lenis = new Lenis({

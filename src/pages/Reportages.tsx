@@ -4,8 +4,10 @@ import { Reveal } from '../components/Reveal';
 import { AdSpace } from '../components/AdSpace';
 import { useArticles, useCategories } from '../lib/hooks';
 import { getArticleImage, onImageError } from '../lib/media';
+import { useI18n } from '../lib/lang';
 
 export default function Reportages() {
+  const { t } = useI18n();
   const { articles, loading } = useArticles();
   const { categories } = useCategories();
 
@@ -21,9 +23,9 @@ export default function Reportages() {
       <Reveal className="mb-16 border-b-2 border-gray-100 pb-8">
         <h1 className="text-4xl md:text-5xl font-serif font-black tracking-tighter text-brand-dark mb-4 uppercase flex items-center gap-4">
           <Video className="text-brand-red w-12 h-12" />
-          Vidéos & Reportages
+          {t('videosTitle')}
         </h1>
-        <p className="text-gray-500 text-lg md:text-xl">Nos reportages exclusifs, interviews et immersions sur le terrain.</p>
+        <p className="text-gray-500 text-lg md:text-xl">{t('videosDesc')}</p>
       </Reveal>
 
       <div className="mb-12">
@@ -31,10 +33,10 @@ export default function Reportages() {
       </div>
 
       {loading ? (
-        <div className="py-24 text-center text-gray-400 font-bold uppercase tracking-widest text-sm">Chargement des vidéos...</div>
+        <div className="py-24 text-center text-gray-400 font-bold uppercase tracking-widest text-sm">{t('loading')}</div>
       ) : videoArticles.length === 0 ? (
         <div className="py-24 text-center text-gray-500 bg-gray-50/50 rounded-2xl border border-gray-100">
-          Aucune vidéo publiée pour le moment. Revenez bientôt !
+          {t('noVideosPage')}
         </div>
       ) : (
         <>
@@ -81,7 +83,7 @@ export default function Reportages() {
               <Reveal delay={0.2}>
                 <h3 className="text-2xl font-serif font-black tracking-wide uppercase text-brand-dark mb-10 flex items-center">
                   <span className="w-8 h-1 bg-brand-red mr-4"></span>
-                  Dernières publications
+                  {t('latestPub')}
                 </h3>
               </Reveal>
 

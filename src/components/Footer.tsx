@@ -3,8 +3,10 @@ import { Facebook, Twitter, Youtube, MapPin, Mail, Phone } from 'lucide-react';
 import { useCategories, useConfig } from '../lib/hooks';
 import { PwaButtons } from './PwaButtons';
 import { apiUrl } from '../lib/api';
+import { useI18n } from '../lib/lang';
 
 export default function Footer() {
+  const { t } = useI18n();
   const { categories } = useCategories();
   const { config } = useConfig();
   const activeCategories = categories.filter(c => c.isActive);
@@ -46,7 +48,7 @@ export default function Footer() {
 
         {/* Newsletter */}
         <div className="lg:col-span-2">
-          <h3 className="font-bold text-sm mb-6 text-brand-dark uppercase border-b-2 border-brand-red pb-2 inline-block">Newsletter</h3>
+          <h3 className="font-bold text-sm mb-6 text-brand-dark uppercase border-b-2 border-brand-red pb-2 inline-block">{t('newsletter')}</h3>
           <p className="text-xs text-gray-600 mb-4 leading-relaxed font-medium">Inscrivez-vous pour recevoir nos meilleurs reportages directement par e-mail.</p>
           <form 
             onSubmit={async (e) => {
@@ -72,13 +74,13 @@ export default function Footer() {
             className="flex flex-col gap-2"
           >
             <input type="email" name="email" placeholder="Votre adresse e-mail" required className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:border-brand-red focus:outline-none" />
-            <button type="submit" className="w-full px-3 py-2 text-sm font-bold text-white bg-brand-red rounded hover:bg-red-700 transition-colors">S'abonner</button>
+            <button type="submit" className="w-full px-3 py-2 text-sm font-bold text-white bg-brand-red rounded hover:bg-red-700 transition-colors">{t('subscribe')}</button>
           </form>
         </div>
 
         {/* Rubriques */}
         <div className="lg:col-span-3">
-          <h3 className="font-bold text-sm mb-6 text-brand-dark uppercase border-b-2 border-brand-red pb-2 inline-block">Rubriques</h3>
+          <h3 className="font-bold text-sm mb-6 text-brand-dark uppercase border-b-2 border-brand-red pb-2 inline-block">{t('sections')}</h3>
           <div className="flex gap-8">
             <ul className="space-y-3 text-sm text-gray-600 font-medium flex-1">
               {leftColCategories.map(cat => (
@@ -99,7 +101,7 @@ export default function Footer() {
 
         {/* Contact */}
         <div className="lg:col-span-3">
-          <h3 className="font-bold text-sm mb-6 text-brand-dark uppercase border-b-2 border-brand-red pb-2 inline-block">Contact</h3>
+          <h3 className="font-bold text-sm mb-6 text-brand-dark uppercase border-b-2 border-brand-red pb-2 inline-block">{t('contact')}</h3>
           <ul className="space-y-4 text-sm text-gray-600">
             <li className="flex items-start gap-3">
               <Phone className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" />

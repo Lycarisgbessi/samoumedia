@@ -35,6 +35,8 @@ model Category {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
   articles  Article[]
+  // Traductions du nom : { en: { name }, es: { name }, ... }
+  translations Json?
 }
 
 model Article {
@@ -122,7 +124,10 @@ model Chronique {
   status      String   @default("PUBLISHED")
   tags        String[] @default([])
   isDeleted   Boolean  @default(false)
-  
+
+  // Traductions mises en cache : { en: {title, excerpt, content}, ... }
+  translations Json?
+
   date        DateTime @default(now())
   views       Int      @default(0)
   

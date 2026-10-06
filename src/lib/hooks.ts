@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react';
 import type { Ad, Article, Category, Chronique, Photo, SiteConfig } from '../types';
 import { normalizeArticle } from './text';
 import { apiUrl } from './api';
+import { useLang } from './lang';
 
 export function useCategories() {
+  const lang = useLang();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(apiUrl('/api/categories'), { cache: 'no-store' })
+    fetch(apiUrl(lang !== 'fr' ? `/api/categories?lang=${encodeURIComponent(lang)}` : '/api/categories'), { cache: 'no-store' })
       .then(res => res.json())
       .then((data: Category[]) => setCategories(Array.isArray(data) ? data : []))
       .catch(() => setCategories([]))
@@ -53,6 +55,7 @@ export function useAds(location?: string, format?: string) {
 }
 
 export function useArticles(params?: { category?: string; featured?: boolean; limit?: number; sort?: string; q?: string; status?: string; tag?: string }) {
+  const lang = useLang();
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -65,23 +68,25 @@ export function useArticles(params?: { category?: string; featured?: boolean; li
     if (params?.q) url += `q=${encodeURIComponent(params.q)}&`;
     if (params?.status) url += `status=${encodeURIComponent(params.status)}&`;
     if (params?.tag) url += `tag=${encodeURIComponent(params.tag)}&`;
+    if (lang !== 'fr') url += `lang=${encodeURIComponent(lang)}&`;
 
     fetch(apiUrl(url), { cache: 'no-store' })
       .then(res => res.json())
       .then((data: Article[]) => setArticles(Array.isArray(data) ? data.map(normalizeArticle) : []))
       .catch(() => setArticles([]))
       .finally(() => setLoading(false));
-  }, [params?.category, params?.featured, params?.limit, params?.sort, params?.q, params?.status, params?.tag]);
+  }, [params?.category, params?.featured, params?.limit, params?.sort, params?.q, params?.status, params?.tag, lang]);
 
   return { articles, loading };
 }
 
 export function useChroniques() {
+  const lang = useLang();
   const [chroniques, setChroniques] = useState<Chronique[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(apiUrl('/api/chroniques'), { cache: 'no-store' })
+    fetch(apiUrl(lang !== 'fr' ? `/api/chroniques?lang=${encodeURIComponent(lang)}` : '/api/chroniques'), { cache: 'no-store' })
       .then(res => res.json())
       .then((data: Chronique[]) => setChroniques(Array.isArray(data) ? data.map(normalizeArticle) : []))
       .catch(() => setChroniques([]))

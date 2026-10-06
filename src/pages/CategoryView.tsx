@@ -4,8 +4,10 @@ import ArticleCard from '../components/ArticleCard';
 import { Reveal } from '../components/Reveal';
 import { motion } from 'motion/react';
 import { AdSpace } from '../components/AdSpace';
+import { useI18n } from '../lib/lang';
 
 export default function CategoryView() {
+  const { t } = useI18n();
   const { slug } = useParams<{ slug: string }>();
   const { categories } = useCategories();
   
@@ -15,7 +17,7 @@ export default function CategoryView() {
   const { articles, loading } = useArticles({ category: categoryId });
   const categoryName = category?.name || slug || 'Rubrique';
 
-  if (loading) return <div className="min-h-screen p-10 flex justify-center text-brand-dark font-mono text-sm tracking-widest uppercase">Chargement...</div>;
+  if (loading) return <div className="min-h-screen p-10 flex justify-center text-brand-dark font-mono text-sm tracking-widest uppercase">{t('loading')}</div>;
 
   return (
     <main className="max-w-7xl mx-auto px-4 py-16 min-h-[60vh] overflow-hidden">
@@ -24,7 +26,7 @@ export default function CategoryView() {
           <span className="w-8 h-1 bg-brand-red mr-4"></span>
           {categoryName.toUpperCase()}
         </h1>
-        <p className="text-gray-500 text-lg md:text-xl font-medium">Retrouvez toute l'actualité de la rubrique {categoryName}.</p>
+        <p className="text-gray-500 text-lg md:text-xl font-medium"><>{t('categoryIntro')} {categoryName}.</></p>
       </Reveal>
 
       <div className="mb-12">
@@ -34,7 +36,7 @@ export default function CategoryView() {
       {articles.length === 0 ? (
         <Reveal delay={0.1}>
           <div className="text-center py-24 bg-gray-50/50 rounded-2xl border border-gray-100 shadow-sm">
-            <p className="text-gray-500 text-lg font-medium">Aucun article publié dans cette rubrique pour le moment.</p>
+            <p className="text-gray-500 text-lg font-medium">{t('noArticles')}</p>
           </div>
         </Reveal>
       ) : (

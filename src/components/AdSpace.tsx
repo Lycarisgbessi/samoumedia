@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useAds } from '../lib/hooks';
 import { trackAdEvent } from '../lib/track';
+import { useI18n } from '../lib/lang';
 
 interface AdSpaceProps {
   format?: 'horizontal' | 'vertical' | 'square' | 'in-article';
@@ -16,6 +17,7 @@ export function isVideoAd(url?: string | null): boolean {
 
 export function AdSpace({ format = 'horizontal', location, className = '' }: AdSpaceProps) {
   const { ads, loading } = useAds(location, format);
+  const { t } = useI18n();
 
   // Statistiques : une impression par publicité affichée
   useEffect(() => {
@@ -67,15 +69,15 @@ export function AdSpace({ format = 'horizontal', location, className = '' }: AdS
             className={`w-full h-auto object-contain mx-auto ${maxHeights[format]}`}
           />
         )}
-        <span className="absolute top-0 right-0 bg-black/50 text-white text-[8px] uppercase px-1 m-1 rounded-sm backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity">Publicité</span>
+        <span className="absolute top-0 right-0 bg-black/50 text-white text-[8px] uppercase px-1 m-1 rounded-sm backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity">{t('ad')}</span>
       </a>
     );
   }
 
   return (
     <div className={`bg-gray-50 border border-gray-200 flex flex-col items-center justify-center text-gray-400 overflow-hidden relative group z-20 ${placeholderDimensions[format]} ${className}`}>
-      <span className="text-xs uppercase tracking-widest font-bold mb-2 z-10 relative">Espace Publicitaire</span>
-      <span className="text-[10px] uppercase z-10 relative">Votre publicité ici</span>
+      <span className="text-xs uppercase tracking-widest font-bold mb-2 z-10 relative">{t('adSpace')}</span>
+      <span className="text-[10px] uppercase z-10 relative">{t('yourAdHere')}</span>
       <div className="absolute inset-0 bg-brand-red/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
     </div>
   );

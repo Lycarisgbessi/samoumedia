@@ -5,8 +5,10 @@ import ArticleCard from '../components/ArticleCard';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Reveal } from '../components/Reveal';
+import { useI18n } from '../lib/lang';
 
 export default function Rubriques() {
+  const { t } = useI18n();
   // La route est /rubriques/:slug — on lit donc "slug" (et non "id").
   const { slug } = useParams<{ slug?: string }>();
   const navigate = useNavigate();
@@ -25,7 +27,7 @@ export default function Rubriques() {
   const activeCategories = categories.filter(c => c.isActive);
   const activeCategoryName = selectedCategory
     ? selectedCategory.name
-    : 'Toutes les rubriques';
+    : t('allSections');
 
   const displayedArticles = selectedId
     ? articles.filter(a => a.categoryId === selectedId)
@@ -53,12 +55,12 @@ export default function Rubriques() {
           >
             {activeCategoryName}
           </motion.h1>
-          <p className="text-gray-500 text-lg">Explorez l'actualité selon vos centres d'intérêt.</p>
+          <p className="text-gray-500 text-lg">{t('sectionsDesc')}</p>
         </div>
         
         {/* Animated Dropdown Menu */}
         <div className="relative z-30 w-full md:w-72">
-          <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Sélectionnez une rubrique</label>
+          <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">{t('selectSection')}</label>
           <button 
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             className={`flex items-center justify-between w-full bg-white border-2 transition-colors duration-300 px-5 py-3.5 rounded-lg text-sm font-bold uppercase tracking-wider shadow-sm hover:shadow-md ${isDropdownOpen ? 'border-brand-red text-brand-red' : 'border-gray-200 hover:border-gray-300 text-gray-800'}`}
@@ -82,7 +84,7 @@ export default function Rubriques() {
                   onClick={() => handleSelect(null)}
                   className={`px-5 py-3.5 text-left text-sm font-semibold uppercase tracking-wider hover:bg-gray-50 transition-colors ${!selectedId ? 'text-brand-red bg-red-50/50' : 'text-gray-700'}`}
                 >
-                  Toutes les rubriques
+                  {t('allSections')}
                 </button>
                 {activeCategories.map(cat => (
                   <button
@@ -120,7 +122,7 @@ export default function Rubriques() {
               animate={{ opacity: 1, y: 0 }} 
               className="col-span-full text-center py-32 bg-gray-50 rounded-xl border border-gray-100 shadow-inner"
             >
-              <p className="text-gray-500 text-xl font-medium">Aucun article publié dans cette rubrique pour le moment.</p>
+              <p className="text-gray-500 text-xl font-medium">{t('noArticles')}</p>
             </motion.div>
           )}
         </AnimatePresence>

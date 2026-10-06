@@ -1,18 +1,18 @@
 // Sélecteur de langue du site — bouton bien visible dans la barre rouge du haut.
-// Traduit TOUT le site (voir lib/translate.ts).
-//
-// NB : la barre rouge a `overflow-hidden` (pour le texte défilant) — le menu est
-// donc rendu en position FIXE (coordonnées calculées au clic) pour ne pas être coupé.
+// Change la langue dans l'URL (?lang=xx) : tout le site (interface + contenu)
+// est servi traduit, sur notre propre domaine.
 
 import { useRef, useState } from 'react';
 import { Languages, Check, ChevronDown } from 'lucide-react';
-import { SITE_LANGUAGES, translateSiteTo } from '../lib/translate';
+import { LANGUAGES } from '../lib/i18n';
+import { useLang, setAppLang } from '../lib/lang';
 
-export function LanguageSwitcher({ current, onChange }: { current: string; onChange: (code: string) => void }) {
+export function LanguageSwitcher() {
   const [open, setOpen] = useState(false);
   const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
-  const active = SITE_LANGUAGES.find(l => l.code === current) || SITE_LANGUAGES[0];
+  const current = useLang();
+  const active = LANGUAGES.find(l => l.code === current) || LANGUAGES[0];
 
   const toggle = () => {
     if (!open && btnRef.current) {
@@ -47,10 +47,10 @@ export function LanguageSwitcher({ current, onChange }: { current: string; onCha
             <p className="px-4 pt-2 pb-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-50 mb-1">
               🌍 Langue du site
             </p>
-            {SITE_LANGUAGES.map(lang => (
+            {LANGUAGES.map(lang => (
               <button
                 key={lang.code}
-                onClick={() => { onChange(lang.code); setOpen(false); }}
+                onClick={() => { setAppLang(lang.code); setOpen(false); }}
                 className={`w-full text-left px-4 py-2.5 text-sm font-bold flex items-center justify-between gap-3 transition-colors ${current === lang.code ? 'bg-red-50 text-brand-red' : 'text-gray-700 hover:bg-gray-50'}`}
               >
                 <span className="flex items-baseline gap-2">
@@ -66,5 +66,3 @@ export function LanguageSwitcher({ current, onChange }: { current: string; onCha
     </div>
   );
 }
-
-export { translateSiteTo };

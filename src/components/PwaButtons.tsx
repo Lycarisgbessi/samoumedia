@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Download, Bell, BellRing } from 'lucide-react';
 import { apiUrl } from '../lib/api';
+import { useI18n } from '../lib/lang';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -14,6 +15,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 }
 
 export function PwaButtons() {
+  const { t } = useI18n();
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [notificationState, setNotificationState] = useState<string>(
     typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'
@@ -96,7 +98,7 @@ export function PwaButtons() {
           className="flex items-center gap-2 px-4 py-2 bg-brand-dark text-white text-xs font-black uppercase tracking-wider rounded-lg hover:bg-brand-red transition-colors"
         >
           <Download size={14} />
-          Installer l'application
+          {t('installApp')}
         </button>
       )}
       {!subscribed && notificationState !== 'denied' && notificationState !== 'unsupported' && (
@@ -106,7 +108,7 @@ export function PwaButtons() {
           className="flex items-center gap-2 px-4 py-2 bg-brand-red text-white text-xs font-black uppercase tracking-wider rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
         >
           {subscribed ? <BellRing size={14} /> : <Bell size={14} />}
-          {busy ? 'Activation…' : 'Alertes nouveaux articles'}
+          {busy ? '…' : t('alerts')}
         </button>
       )}
     </div>

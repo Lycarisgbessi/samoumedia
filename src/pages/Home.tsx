@@ -4,9 +4,11 @@ import { Play, ChevronLeft, ChevronRight, Facebook, Twitter, Youtube, X } from '
 import { AdSpace } from '../components/AdSpace';
 import { SectionRibbon } from '../components/SectionRibbon';
 import { useArticles, useCategories, useChroniques, useConfig, usePhotos } from '../lib/hooks';
+import { useI18n } from '../lib/lang';
 import { FALLBACK_IMAGE, getArticleImage, onImageError } from '../lib/media';
 
 export default function Home() {
+  const { t } = useI18n();
   const { articles, loading: articlesLoading } = useArticles();
   const { categories } = useCategories();
   const { chroniques } = useChroniques();
@@ -70,7 +72,7 @@ export default function Home() {
       {activeTag && (
         <div className="mb-6 flex items-center justify-between bg-red-50 border border-red-200 px-4 py-3">
           <p className="text-sm font-bold text-brand-red uppercase tracking-wide">
-            Articles tagués « {activeTag} » — {tagFilteredArticles.length} résultat(s)
+            « {activeTag} » — {tagFilteredArticles.length} {t('resultsFor')}
           </p>
           <button onClick={clearTag} className="p-1 text-gray-500 hover:text-brand-red" title="Retirer le filtre">
             <X size={18} />
@@ -144,7 +146,7 @@ export default function Home() {
 
         <div className="lg:col-span-8">
           <SectionRibbon color="red" rightLink={{text: '', url: '#'}}>
-            DERNIÈRES ACTUALITÉS
+            {t('latest')}
           </SectionRibbon>
 
           {/* Onglets de filtre fonctionnels, générés depuis les rubriques réelles */}
@@ -189,7 +191,7 @@ export default function Home() {
         {/* Sidebar: Les plus lus */}
         <div className="lg:col-span-4">
           <SectionRibbon color="green">
-            LES PLUS LUS
+            {t('mostRead')}
           </SectionRibbon>
 
           <div className="flex flex-col gap-4">
@@ -214,7 +216,7 @@ export default function Home() {
 
         <div className="lg:col-span-8">
           <SectionRibbon color="green">
-            SAMOU BENTY EN DIRECT
+            {t('samouLive')}
           </SectionRibbon>
 
           <div className="relative">
@@ -242,7 +244,7 @@ export default function Home() {
 
         <div className="lg:col-span-4">
           <SectionRibbon color="red" rightLink={{ text: 'VOIR TOUT', url: '/reportages' }}>
-            VIDÉOS À LA UNE
+            {t('videos')}
           </SectionRibbon>
 
           <div className="flex flex-col gap-4">
@@ -261,7 +263,7 @@ export default function Home() {
               </Link>
             ) : (
               <div className="relative aspect-video bg-gray-100 flex items-center justify-center text-gray-400 text-xs font-bold uppercase">
-                Aucune vidéo pour le moment
+                {t('noVideos')}
               </div>
             )}
             {/* Petites vidéos */}
@@ -286,7 +288,7 @@ export default function Home() {
         {/* Chroniques */}
         <div>
           <SectionRibbon color="yellow">
-            CHRONIQUES & ANALYSES
+            {t('chroniques')}
           </SectionRibbon>
           <div className="flex flex-col gap-4">
             {chroniques.map((item) => (
@@ -311,7 +313,7 @@ export default function Home() {
         {photos.length > 0 && (
         <div>
           <SectionRibbon color="red">
-            GALERIE PHOTOS
+            {t('gallery')}
           </SectionRibbon>
           <div className="grid grid-cols-2 gap-2">
             {photos.slice(0, 3).map((photo, i) => (
@@ -340,7 +342,7 @@ export default function Home() {
         {/* Restez Connecté — cartes réseaux sociaux */}
         <div>
           <SectionRibbon color="green">
-            RESTEZ CONNECTÉ
+            {t('stayConnected')}
           </SectionRibbon>
           <div className="grid grid-cols-2 gap-3">
             {/* Facebook */}

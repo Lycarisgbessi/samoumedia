@@ -8,30 +8,33 @@ import { Reveal } from '../components/Reveal';
 import { AdSpace } from '../components/AdSpace';
 import { normalizeArticle } from '../lib/text';
 import { apiUrl } from '../lib/api';
+import { useI18n, useLang } from '../lib/lang';
 import { FALLBACK_IMAGE, onImageError } from '../lib/media';
 import type { Chronique } from '../types';
 
 export default function ChroniqueView() {
   const { slug } = useParams<{ slug: string }>();
+  const lang = useLang();
+  const { t } = useI18n();
   const [chronique, setChronique] = useState<Chronique | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    fetch(apiUrl(`/api/chroniques/slug/${slug}`), { cache: 'no-store' })
+    fetch(apiUrl(`/api/chroniques/slug/${slug}${lang !== 'fr' ? `?lang=${encodeURIComponent(lang)}` : ''}`), { cache: 'no-store' })
       .then(res => res.ok ? res.json() : Promise.reject())
       .then(data => setChronique(normalizeArticle(data)))
       .catch(() => setChronique(null))
       .finally(() => setLoading(false));
-  }, [slug]);
+  }, [slug, lang]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-brand-dark font-mono text-sm tracking-widest uppercase">Chargement en cours...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-brand-dark font-mono text-sm tracking-widest uppercase">{t('loading')}</div>;
 
   if (!chronique) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
-        <p className="text-brand-red font-mono text-sm tracking-widest uppercase">Chronique introuvable.</p>
-        <Link to="/" className="text-sm font-bold text-brand-dark hover:text-brand-red underline">Retour à l'accueil</Link>
+        <p className="text-brand-red font-mono text-sm tracking-widest uppercase">{t('chroniqueNotFound')}</p>
+        <Link to="/" className="text-sm font-bold text-brand-dark hover:text-brand-red underline">{t('backHome')}</Link>
       </div>
     );
   }
@@ -73,7 +76,7 @@ export default function ChroniqueView() {
               </div>
               <div className="flex flex-col items-end gap-2 text-xs text-gray-400 font-bold uppercase tracking-wider">
                 <span className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5" /> {formatDistanceToNow(new Date(chronique.date), { addSuffix: true, locale: fr })}</span>
-                <span className="flex items-center gap-2"><Eye className="w-3.5 h-3.5" /> {chronique.views} vues</span>
+                <span className="flex items-center gap-2"><Eye className="w-3.5 h-3.5" /> {chronique.views} {t('views')}</span>
               </div>
             </div>
           </Reveal>
@@ -94,7 +97,7 @@ export default function ChroniqueView() {
 
             {chronique.tags && chronique.tags.length > 0 && (
               <div className="mt-12 pt-8 border-t border-gray-100 flex flex-wrap gap-2">
-                <span className="font-bold text-gray-500 mr-2 flex items-center"><Clock className="w-4 h-4 mr-1" /> Tags :</span>
+                <span className="font-bold text-gray-500 mr-2 flex items-center"><Clock className="w-4 h-4 mr-1" /> {t('tags')}</span>
                 {chronique.tags.map(tag => (
                   <a
                     href={`/?tag=${encodeURIComponent(tag)}`}

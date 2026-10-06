@@ -4,49 +4,23 @@ import { useArticles, useCategories, useConfig } from '../lib/hooks';
 import { AdSpace } from './AdSpace';
 import { motion, AnimatePresence } from 'motion/react';
 import { useState, useEffect, type FormEvent } from 'react';
-import { translateSiteTo, detectCurrentLang } from '../lib/translate';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { useI18n } from '../lib/lang';
 
 export default function Header() {
   const { categories } = useCategories();
   const { config } = useConfig();
   const { articles } = useArticles({ limit: 6 });
+  const { t } = useI18n();
   const activeCategories = categories.filter(c => c.isActive);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentLang, setCurrentLang] = useState('fr');
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
     setIsMenuOpen(false);
   }, [location.pathname]);
-
-  // Langue courante : déduite de l'URL (miroir traduit) ou mémorisée
-  useEffect(() => {
-    const detected = detectCurrentLang();
-    setCurrentLang(detected);
-    // Au premier affichage du site original, restaure la préférence mémorisée
-    if (detected === 'fr') {
-      const saved = localStorage.getItem('samou_lang');
-      if (saved && saved !== 'fr') {
-        setCurrentLang(saved);
-        translateSiteTo(saved);
-      }
-    }
-  }, []);
-
-  const handleLanguage = (code: string) => {
-    setCurrentLang(code);
-    // FR = retour volontaire au français : on oublie la préférence traduite
-    // pour ne jamais rebasculer automatiquement vers la traduction.
-    if (code === 'fr') {
-      localStorage.removeItem('samou_lang');
-    } else {
-      localStorage.setItem('samou_lang', code);
-    }
-    translateSiteTo(code);
-  };
 
   // Recherche : navigation vers la page de résultats /recherche?q=...
   const handleSearch = (e: FormEvent) => {
@@ -71,8 +45,8 @@ export default function Header() {
     <header className="w-full bg-white flex flex-col z-50 relative">
       {/* Top Bar - Flash Info & Socials */}
       <div className="bg-brand-red text-white flex items-center px-4 py-1 text-sm overflow-hidden h-10">
-        <div className="bg-white text-brand-red px-3 py-1 text-xs font-black mr-4 shrink-0 uppercase">
-          FLASH INFO
+        <div className="bg-white text-brand-red px-3 py-1 text-xs font-black mr-2 sm:mr-4 shrink-0 uppercase">
+          {t('flash')}
         </div>
         <div className="flex-1 overflow-hidden relative h-5 flex items-center">
           <motion.div
@@ -84,7 +58,7 @@ export default function Header() {
           </motion.div>
         </div>
         {/* Sélecteur de langue — toujours visible (ordinateur + mobile) */}
-        <LanguageSwitcher current={currentLang} onChange={handleLanguage} />
+        <LanguageSwitcher />
 
         <div className="hidden md:flex items-center gap-4 shrink-0 text-xs font-bold uppercase ml-2">
           <span>{new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
@@ -124,8 +98,8 @@ export default function Header() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Recherche..."
-            aria-label="Rechercher un article"
+            placeholder={t('search')}
+            aria-label={t('searchTitle')}
             className="w-full pl-4 pr-10 py-2 border border-gray-300 bg-gray-50 focus:outline-none focus:border-brand-red text-sm"
           />
           <button type="submit" className="absolute right-0 top-0 h-full px-3 text-white bg-brand-red" title="Rechercher">
