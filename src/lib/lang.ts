@@ -12,9 +12,17 @@ export function useLang(): string {
   return valid.includes(lang) ? lang : 'fr';
 }
 
-/** Change la langue de tout le site : met ?lang= dans l'URL et recharge la page. */
+/** Change la langue de tout le site : met ?lang= dans l'URL et recharge la page.
+ *  Si le visiteur est encore sur l'ancien miroir Google, il est ramené sur le vrai domaine. */
 export function setAppLang(code: string) {
-  const url = new URL(window.location.href);
+  let origin = window.location.origin;
+  let pathname = window.location.pathname;
+  if (window.location.hostname.endsWith('.translate.goog')) {
+    const sub = window.location.hostname.replace(/\.translate\.goog$/, '');
+    const realHost = sub.replace(/--/g, '@').replace(/-/g, '.').replace(/@/g, '-');
+    origin = `https://${realHost}`;
+  }
+  const url = new URL(`${origin}${pathname}`);
   if (code === 'fr') {
     url.searchParams.delete('lang');
     localStorage.removeItem('samou_lang');

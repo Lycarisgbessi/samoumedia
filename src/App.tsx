@@ -40,6 +40,16 @@ export default function App() {
   // Langue du site : direction de lecture (RTL arabe) gérée globalement
   useI18n();
 
+  // Auto-libération : quiconque arrive encore sur l'ancien miroir Google
+  // (translate.goog) est immédiatement ramené sur le VRAI site.
+  useEffect(() => {
+    if (window.location.hostname.endsWith('.translate.goog')) {
+      const sub = window.location.hostname.replace(/\.translate\.goog$/, '');
+      const realHost = sub.replace(/--/g, '@').replace(/-/g, '.').replace(/@/g, '-');
+      window.location.replace(`https://${realHost}${window.location.pathname}`);
+    }
+  }, []);
+
   useEffect(() => {
     const lenis = new Lenis({
       duration: 1.2,
