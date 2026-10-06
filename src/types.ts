@@ -41,6 +41,9 @@ export interface Article {
   status: 'DRAFT' | 'PUBLISHED';
   tags: string[];
   isDeleted: boolean;
+  titleFont?: string | null;
+  excerptFont?: string | null;
+  contentFont?: string | null;
 }
 
 export interface SiteConfig {

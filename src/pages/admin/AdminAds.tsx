@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Edit2, Trash2, Plus, X, Search, Save, Power, CheckCircle, XCircle } from 'lucide-react';
+import { Edit2, Trash2, Plus, X, Search, Save, Power, CheckCircle, XCircle, Film } from 'lucide-react';
 import { authFetch } from '../../lib/auth';
 import { compressImage } from '../../utils/imageCompression';
+import { isVideoAd } from '../../components/AdSpace';
+
+// Limite Vercel : ~4,5 Mo par requête (base64 inclus) → fichier source max ~3 Mo
+// pour les formats non compressés (GIF animés, vidéos).
+const MAX_RAW_BYTES = 3 * 1024 * 1024;
 
 const LOCATION_LABELS: Record<string, string> = {
   header: 'En-tête du site',
@@ -48,11 +53,31 @@ export default function AdminAds() {
     if (!file) return;
 
     try {
-      const base64Image = await compressImage(file, 1200, 0.8);
+      const isGif = file.type === 'image/gif';
+      const isVideo = file.type.startsWith('video/');
+
+      let base64Payload: string;
+      if (isGif || isVideo) {
+        // GIF animés et vidéos : JAMAIS de compression (elle tuerait l'animation)
+        // → envoi du fichier original, limité à 3 Mo (limite des requêtes Vercel).
+        if (file.size > MAX_RAW_BYTES) {
+          alert(`Fichier trop lourd (${(file.size / 1024 / 1024).toFixed(1)} Mo).\nLes GIF et vidéos publicitaires doivent peser moins de 3 Mo. Compressez la vidéo (ex: 720p, quelques secondes) puis réessayez.`);
+          return;
+        }
+        base64Payload = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      } else {
+        base64Payload = await compressImage(file, 1200, 0.8);
+      }
+
       const res = await authFetch('/api/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: base64Image })
+        body: JSON.stringify({ image: base64Payload })
       });
       const data = await res.json();
       if (data.url) {
@@ -62,7 +87,7 @@ export default function AdminAds() {
       }
     } catch (error) {
       console.error('Erreur lors de l\'upload:', error);
-      alert("Erreur lors du téléchargement de l'image (l'image est peut-être trop lourde ou mal formatée)");
+      alert("Erreur lors du téléchargement du fichier (trop lourd ou format non supporté).");
     }
   };
 
@@ -126,18 +151,26 @@ export default function AdminAds() {
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-700">Image</label>
+              <label className="text-sm font-bold text-gray-700">Création publicitaire (image, GIF animé ou vidéo)</label>
               <div className="flex flex-col gap-2">
                 {currentAd.imageUrl && (
-                  <img src={currentAd.imageUrl} alt="Aperçu" className="h-20 object-contain bg-gray-100 rounded" />
+                  isVideoAd(currentAd.imageUrl) ? (
+                    <video src={currentAd.imageUrl} autoPlay muted loop playsInline className="max-h-40 object-contain bg-gray-100 rounded" />
+                  ) : (
+                    <img src={currentAd.imageUrl} alt="Aperçu" className="max-h-40 object-contain bg-gray-100 rounded" />
+                  )
                 )}
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleImageUpload} 
-                  className="w-full px-4 py-2 border rounded-lg bg-white" 
+                <input
+                  type="file"
+                  accept="image/*,video/mp4,video/webm"
+                  onChange={handleImageUpload}
+                  className="w-full px-4 py-2 border rounded-lg bg-white"
                   required={!currentAd.imageUrl}
                 />
+                <p className="text-[11px] text-gray-400 flex items-start gap-1">
+                  <Film size={12} className="mt-0.5 shrink-0" />
+                  Images : compressées automatiquement. GIF animés et vidéos (MP4/WebM) : envoyés tels quels, <strong>3 Mo maximum</strong> — au-delà, la plateforme d'hébergement refuse. La suppression d'une publicité supprime aussi son fichier de l'hébergement (l'espace est libéré).
+                </p>
               </div>
             </div>
             <div className="space-y-2">
@@ -180,13 +213,16 @@ export default function AdminAds() {
         {ads.map((ad) => (
           <div key={ad.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
             <div className="h-16 w-28 bg-gray-100 rounded-lg overflow-hidden shrink-0">
-              {ad.imageUrl && (
+              {ad.imageUrl && !isVideoAd(ad.imageUrl) && (
                 <img
                   onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Crect fill='%23f3f4f6' width='800' height='600'/%3E%3Ctext fill='%239ca3af' font-family='sans-serif' font-size='30' dy='10.5' font-weight='bold' x='50%25' y='50%25' text-anchor='middle'%3ESAMOU MEDIA%3C/text%3E%3C/svg%3E"; }}
                   src={ad.imageUrl}
                   alt={ad.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                 />
+              )}
+              {ad.imageUrl && isVideoAd(ad.imageUrl) && (
+                <video src={ad.imageUrl} autoPlay muted loop playsInline className="w-full h-full object-contain" />
               )}
             </div>
             <div className="flex-1 min-w-0">

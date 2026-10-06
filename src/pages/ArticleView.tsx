@@ -91,12 +91,18 @@ export default function ArticleView() {
               </div>
             </Reveal>
             <Reveal delay={0.1}>
-              <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-serif font-black text-white leading-[1.1] mb-4 md:mb-6 drop-shadow-xl break-words">
+              <h1
+                style={article.titleFont ? { fontFamily: article.titleFont } : undefined}
+                className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-serif font-black text-white leading-[1.1] mb-4 md:mb-6 drop-shadow-xl break-words"
+              >
                 {article.title}
               </h1>
             </Reveal>
             <Reveal delay={0.2}>
-              <p className="text-base md:text-2xl text-gray-300 leading-relaxed font-medium max-w-3xl border-l-4 border-brand-red pl-4 md:pl-6 drop-shadow-md break-words">
+              <p
+                style={article.excerptFont ? { fontFamily: article.excerptFont } : undefined}
+                className="text-base md:text-2xl text-gray-300 leading-relaxed font-medium max-w-3xl border-l-4 border-brand-red pl-4 md:pl-6 drop-shadow-md break-words"
+              >
                 {article.excerpt}
               </p>
             </Reveal>
@@ -160,8 +166,13 @@ export default function ArticleView() {
 
           <div className="prose prose-base sm:prose-lg md:prose-xl prose-red max-w-none prose-p:leading-relaxed prose-p:text-gray-800 prose-headings:font-serif prose-headings:font-black">
             <div
+              style={article.contentFont ? { fontFamily: article.contentFont } : undefined}
               className="article-content font-serif text-lg sm:text-xl md:text-2xl leading-relaxed text-gray-800 mb-8 first-letter:text-5xl md:first-letter:text-6xl lg:first-letter:text-7xl first-letter:font-black first-letter:text-brand-red first-letter:mr-3 first-letter:float-left first-letter:leading-none"
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(article.content) }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(article.content, {
+                // Autorise les vidéos YouTube intégrées via l'éditeur (<iframe>)
+                ADD_TAGS: ['iframe'],
+                ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'src', 'title', 'referrerpolicy']
+              }) }}
             />
 
             {article.tags && article.tags.length > 0 && (

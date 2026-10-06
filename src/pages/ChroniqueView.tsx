@@ -82,7 +82,10 @@ export default function ChroniqueView() {
           {chronique.content ? (
             <div
               className="article-content prose prose-base sm:prose-lg max-w-none prose-p:leading-relaxed prose-p:text-gray-800 prose-headings:font-serif prose-headings:font-black font-serif text-lg sm:text-xl leading-relaxed text-gray-800 first-letter:text-5xl md:first-letter:text-6xl first-letter:font-black first-letter:text-brand-red first-letter:mr-3 first-letter:float-left first-letter:leading-none"
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(chronique.content) }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(chronique.content, {
+                ADD_TAGS: ['iframe'],
+                ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'src', 'title', 'referrerpolicy']
+              }) }}
             />
           ) : (
               <p className="text-gray-500 italic">Le contenu de cette chronique n'est pas encore disponible.</p>

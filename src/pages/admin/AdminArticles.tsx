@@ -1,24 +1,118 @@
-import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react';
-import { Plus, Edit2, Trash2, X, Save, Star, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useRef, type FormEvent, type ChangeEvent } from 'react';
+import { Plus, Edit2, Trash2, X, Save, Star, Search, ChevronLeft, ChevronRight, Link2 } from 'lucide-react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { useCategories } from '../../lib/hooks';
 import { authFetch } from '../../lib/auth';
 import { compressImage } from '../../utils/imageCompression';
-import { FALLBACK_IMAGE, onImageError } from '../../lib/media';
+import { FALLBACK_IMAGE, getYouTubeId, onImageError } from '../../lib/media';
+import { FONT_OPTIONS } from '../../lib/fonts';
+
+const DRAFT_KEY = 'samou_draft_article';
 
 export default function AdminArticles() {
   const [articles, setArticles] = useState<any[]>([]);
   const { categories } = useCategories();
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [currentArticle, setCurrentArticle] = useState<any>({});
-  
+
+  // Brouillon de secours : sauvegardé automatiquement pendant la rédaction.
+  // Si la session expire ou que le navigateur se recharge (fréquent sur téléphone),
+  // le contenu est proposé à la restauration au retour.
+  const [recoverableDraft, setRecoverableDraft] = useState<any>(null);
+  const quillRef = useRef<any>(null);
+
   // Search and Pagination
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [viewTrash, setViewTrash] = useState(false);
   const itemsPerPage = 10;
+
+  // À l'ouverture : propose un éventuel brouillon non enregistré
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const draft = JSON.parse(raw);
+        if (draft && (draft.title || draft.content?.replace(/<[^>]*>/g, ''))) {
+          setRecoverableDraft(draft);
+        }
+      }
+    } catch { /* brouillon illisible, on ignore */ }
+  }, []);
+
+  // Sauvegarde automatique du brouillon pendant la rédaction
+  useEffect(() => {
+    if (isEditing && currentArticle?.title) {
+      try { localStorage.setItem(DRAFT_KEY, JSON.stringify(currentArticle)); } catch { }
+    }
+  }, [currentArticle, isEditing]);
+
+  // Insertion d'IMAGE dans le corps de l'article (upload → Cloudinary → insertion)
+  const handleEditorImage = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      try {
+        const base64Image = await compressImage(file, 1400, 0.85);
+        const res = await authFetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: base64Image })
+        });
+        const data = await res.json();
+        if (data.url && quillRef.current) {
+          const editor = quillRef.current.getEditor();
+          const range = editor.getSelection(true);
+          editor.insertEmbed(range?.index ?? editor.getLength(), 'image', data.url);
+        } else {
+          alert('Erreur lors de l\'insertion de l\'image : ' + (data.error || 'réponse inattendue'));
+        }
+      } catch {
+        alert("Erreur lors du téléversement de l'image. Votre texte reste intact : réessayez.");
+      }
+    };
+    input.click();
+  };
+
+  // Insertion de VIDÉO YouTube dans le corps de l'article
+  const handleEditorVideo = () => {
+    const url = prompt('Collez le lien de la vidéo YouTube :\n(ex: https://www.youtube.com/watch?v=...)');
+    if (!url) return;
+    const videoId = getYouTubeId(url.trim());
+    if (!videoId) {
+      alert('Lien YouTube non reconnu. Vérifiez le lien (youtube.com ou youtu.be).');
+      return;
+    }
+    if (quillRef.current) {
+      const editor = quillRef.current.getEditor();
+      const range = editor.getSelection(true);
+      editor.insertEmbed(range?.index ?? editor.getLength(), 'video', `https://www.youtube.com/embed/${videoId}`);
+    }
+  };
+
+  // Toolbar de l'éditeur : mise en forme + LIENS + IMAGES + VIDÉOS
+  const modules = {
+    toolbar: {
+      container: [
+        [{ 'header': [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+        [{ 'align': [] }],
+        ['link', 'blockquote'],
+        ['image', 'video'],
+        ['clean']
+      ],
+      handlers: {
+        image: handleEditorImage,
+        video: handleEditorVideo
+      }
+    }
+  };
 
   const fetchArticles = async () => {
     let url = `/api/articles?status=all&trash=${viewTrash}&`;
@@ -53,6 +147,9 @@ export default function AdminArticles() {
         body: JSON.stringify(currentArticle)
       });
     }
+    // Article enregistré : le brouillon de secours n'est plus utile
+    try { localStorage.removeItem(DRAFT_KEY); } catch { }
+    setRecoverableDraft(null);
     setIsEditing(false);
     fetchArticles();
   };
@@ -160,6 +257,36 @@ export default function AdminArticles() {
         )}
       </div>
 
+      {/* Brouillon non enregistré retrouvé (session expirée, page rechargée...) */}
+      {recoverableDraft && !isEditing && (
+        <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+          <p className="text-sm text-amber-800 flex-1">
+            <strong>Brouillon retrouvé</strong> — « {String(recoverableDraft.title || 'Sans titre').substring(0, 60)} » n'a pas été enregistré. Voulez-vous le récupérer ?
+          </p>
+          <div className="flex gap-2 shrink-0">
+            <button
+              onClick={() => {
+                setCurrentArticle({ status: 'PUBLISHED', tags: [], ...recoverableDraft });
+                setRecoverableDraft(null);
+                setIsEditing(true);
+              }}
+              className="bg-amber-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-amber-700"
+            >
+              Récupérer le brouillon
+            </button>
+            <button
+              onClick={() => {
+                try { localStorage.removeItem(DRAFT_KEY); } catch { }
+                setRecoverableDraft(null);
+              }}
+              className="bg-white border border-amber-300 text-amber-800 px-4 py-2 rounded-lg text-xs font-bold hover:bg-amber-100"
+            >
+              Supprimer
+            </button>
+          </div>
+        </div>
+      )}
+
       {isEditing ? (
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
           <div className="flex justify-between items-center mb-6">
@@ -171,10 +298,21 @@ export default function AdminArticles() {
           
           <form onSubmit={handleSave} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-gray-700">Titre</label>
-                <input type="text" required value={currentArticle.title || ''} onChange={e => setCurrentArticle({...currentArticle, title: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-gray-700">Titre</label>
+              <input type="text" required value={currentArticle.title || ''} onChange={e => setCurrentArticle({...currentArticle, title: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-bold text-gray-500 uppercase shrink-0">Police du titre</label>
+                <select
+                  value={currentArticle.titleFont || ''}
+                  onChange={e => setCurrentArticle({ ...currentArticle, titleFont: e.target.value || null })}
+                  className="flex-1 px-3 py-1.5 border rounded-lg text-sm bg-white"
+                  style={{ fontFamily: currentArticle.titleFont || undefined }}
+                >
+                  {FONT_OPTIONS.map(f => <option key={f.label} value={f.value}>{f.label}</option>)}
+                </select>
               </div>
+            </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-gray-700">Catégorie</label>
                 <select value={currentArticle.categoryId || ''} onChange={e => setCurrentArticle({...currentArticle, categoryId: e.target.value})} className="w-full px-4 py-2 border rounded-lg" required>
@@ -228,14 +366,43 @@ export default function AdminArticles() {
             <div className="space-y-2">
               <label className="text-sm font-bold text-gray-700">Extrait (Résumé court)</label>
               <textarea required rows={2} value={currentArticle.excerpt || ''} onChange={e => setCurrentArticle({...currentArticle, excerpt: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-bold text-gray-500 uppercase shrink-0">Police de l'extrait</label>
+                <select
+                  value={currentArticle.excerptFont || ''}
+                  onChange={e => setCurrentArticle({ ...currentArticle, excerptFont: e.target.value || null })}
+                  className="flex-1 px-3 py-1.5 border rounded-lg text-sm bg-white"
+                  style={{ fontFamily: currentArticle.excerptFont || undefined }}
+                >
+                  {FONT_OPTIONS.map(f => <option key={f.label} value={f.value}>{f.label}</option>)}
+                </select>
+              </div>
             </div>
             <div className="space-y-2 pb-12">
-              <label className="text-sm font-bold text-gray-700">Contenu de l'article</label>
-              <ReactQuill 
-                theme="snow" 
-                value={currentArticle.content || ''} 
-                onChange={(val) => setCurrentArticle({...currentArticle, content: val})} 
-                className="h-64 mb-12"
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                <label className="text-sm font-bold text-gray-700">Contenu de l'article</label>
+                <div className="flex items-center gap-2 sm:ml-auto">
+                  <label className="text-xs font-bold text-gray-500 uppercase shrink-0">Police du contenu</label>
+                  <select
+                    value={currentArticle.contentFont || ''}
+                    onChange={e => setCurrentArticle({ ...currentArticle, contentFont: e.target.value || null })}
+                    className="px-3 py-1.5 border rounded-lg text-xs bg-white"
+                    style={{ fontFamily: currentArticle.contentFont || undefined }}
+                  >
+                    {FONT_OPTIONS.map(f => <option key={f.label} value={f.value}>{f.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              <p className="text-[11px] text-gray-400 flex items-center gap-1">
+                <Link2 size={12} /> Pour insérer un lien : sélectionnez du texte puis cliquez sur l'icône chaîne 🔗 de la barre. Images 🖼 et vidéos YouTube ▶ intégrables à tout endroit du texte.
+              </p>
+              <ReactQuill
+                {...{ ref: quillRef } as any}
+                theme="snow"
+                modules={modules}
+                value={currentArticle.content || ''}
+                onChange={(val) => setCurrentArticle({...currentArticle, content: val})}
+                className="mb-12"
               />
             </div>
             <div className="flex items-center gap-2 pt-8">

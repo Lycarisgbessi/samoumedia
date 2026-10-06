@@ -38,14 +38,16 @@ if (!IS_SERVERLESS && !fs.existsSync(UPLOADS_DIR)) {
   try { fs.mkdirSync(UPLOADS_DIR, { recursive: true }); } catch (err) { }
 }
 
-const deleteImageFile = async (imageUrl: string) => {
-  if (!imageUrl) return;
-  if (imageUrl.startsWith('http') && imageUrl.includes('cloudinary.com')) {
-    const parts = imageUrl.split('/');
+const deleteImageFile = async (mediaUrl: string) => {
+  if (!mediaUrl) return;
+  if (mediaUrl.startsWith('http') && mediaUrl.includes('cloudinary.com')) {
+    const parts = mediaUrl.split('/');
     const publicId = `${parts[parts.length - 2]}/${parts[parts.length - 1].split('.')[0]}`;
-    try { await cloudinary.uploader.destroy(publicId); } catch (err) { }
-  } else if (imageUrl.startsWith('/uploads/')) {
-    const filepath = path.join(UPLOADS_DIR, imageUrl.replace('/uploads/', ''));
+    // Les vidéos Cloudinary vivent sous /video/upload/, les images sous /image/upload/
+    const resourceType = mediaUrl.includes('/video/upload/') ? 'video' : 'image';
+    try { await cloudinary.uploader.destroy(publicId, { resource_type: resourceType as any }); } catch (err) { }
+  } else if (mediaUrl.startsWith('/uploads/')) {
+    const filepath = path.join(UPLOADS_DIR, mediaUrl.replace('/uploads/', ''));
     if (fs.existsSync(filepath)) {
       try { fs.unlinkSync(filepath); } catch (err) { }
     }
@@ -118,11 +120,14 @@ const articleSchema = z.object({
   imageUrl: z.string().optional().nullable(),
   videoUrl: z.string().optional().nullable(),
   categoryId: z.string(),
-  author: z.string(), 
+  author: z.string(),
   readTime: z.string().optional().nullable(),
   isFeatured: z.boolean().optional().default(false),
   status: z.enum(['DRAFT', 'PUBLISHED']).optional().default('PUBLISHED'),
-  tags: z.array(z.string()).optional().default([])
+  tags: z.array(z.string()).optional().default([]),
+  titleFont: z.string().optional().nullable(),
+  excerptFont: z.string().optional().nullable(),
+  contentFont: z.string().optional().nullable()
 });
 
 const categorySchema = z.object({
@@ -165,7 +170,7 @@ app.post('/api/login', loginLimiter, asyncHandler(async (req: any, res: any) => 
   const { username = 'admin', password } = req.body;
   const user = await prisma.user.findUnique({ where: { username } });
   if (user && await bcrypt.compare(password, user.passwordHash)) {
-    const token = jwt.sign({ role: 'admin', id: user.id }, JWT_SECRET, { expiresIn: '24h' });
+    const token = jwt.sign({ role: 'admin', id: user.id }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ success: true, token });
   } else {
     res.status(401).json({ success: false, error: 'Identifiants incorrects' });
@@ -180,9 +185,11 @@ app.post('/api/upload', authenticateToken, asyncHandler(async (req: any, res: an
     if (!image) return res.status(400).json({ error: 'No image provided' });
 
     if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+      // resource_type 'auto' : détecte automatiquement images, GIF animés ET vidéos (mp4/webm).
+      // Les GIF ne sont pas recompressés côté client pour préserver l'animation.
       const result = await cloudinary.uploader.upload(image, {
-        folder: 'samou-media',
-        allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp']
+        resource_type: 'auto',
+        folder: 'samou-media'
       });
       return res.json({ url: result.secure_url });
     }

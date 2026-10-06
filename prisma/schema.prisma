@@ -56,6 +56,11 @@ model Article {
   status     String   @default("PUBLISHED") // "DRAFT" or "PUBLISHED"
   tags       String[] @default([])
   isDeleted  Boolean  @default(false)
+
+  // Polices personnalisées (titre / extrait / contenu) — pile CSS Google Fonts
+  titleFont   String?
+  excerptFont String?
+  contentFont String?
   
   date       DateTime @default(now())
   readTime   String?

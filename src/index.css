@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Playfair+Display:wght@400;700;900&family=Merriweather:wght@400;700;900&family=Lora:wght@400;700&family=Oswald:wght@400;600;700&family=Montserrat:wght@400;600;800&family=Poppins:wght@400;600;800&family=Bebas+Neue&display=swap');
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
@@ -58,4 +58,15 @@ html, body {
 
 .article-content a {
   overflow-wrap: anywhere; /* les longues URLs peuvent se couper n'importe où */
+}
+
+/* Vidéos YouTube intégrées dans le contenu des articles (bouton Vidéo de l'éditeur) :
+   Quill impose width/height en style inline — on force le format 16:9 responsive. */
+.article-content iframe.ql-video {
+  width: 100% !important;
+  height: auto !important;
+  aspect-ratio: 16 / 9;
+  border-radius: 0.75rem;
+  margin: 1rem auto;
+  display: block;
 }
