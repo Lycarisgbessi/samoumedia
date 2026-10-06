@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Menu, Home } from 'lucide-react';
+import { Search, Menu, Home, Mail } from 'lucide-react';
 import { useArticles, useCategories, useConfig } from '../lib/hooks';
 import { AdSpace } from './AdSpace';
 import { motion, AnimatePresence } from 'motion/react';
@@ -132,6 +132,15 @@ export default function Header() {
             ))}
           </div>
 
+          {/* Bouton CONTACT mis en évidence */}
+          <Link
+            to="/contact"
+            className="hidden lg:flex items-center gap-1.5 bg-brand-red hover:bg-red-700 text-white text-[12px] font-black uppercase tracking-wider px-4 h-full items-center transition-colors shrink-0"
+          >
+            <Mail size={14} />
+            Contact
+          </Link>
+
           {/* Mobile Menu Dropdown */}
           <AnimatePresence>
             {isMenuOpen && (
@@ -142,10 +151,16 @@ export default function Header() {
                 className="absolute top-12 left-0 right-0 bg-brand-dark z-50 border-t border-gray-800 lg:hidden shadow-xl"
               >
                 <div className="flex flex-col py-2">
+                  <Link
+                    to="/contact"
+                    className="flex items-center gap-2 py-3 px-6 text-sm font-black uppercase text-white bg-brand-red"
+                  >
+                    <Mail size={16} /> Contactez-nous
+                  </Link>
                   {activeCategories.map(cat => (
-                    <Link 
+                    <Link
                       key={cat.id}
-                      to={`/rubriques/${cat.slug}`} 
+                      to={`/rubriques/${cat.slug}`}
                       className="py-3 px-6 text-sm font-bold uppercase text-white hover:text-brand-yellow border-b border-gray-800"
                     >
                       {cat.name}
