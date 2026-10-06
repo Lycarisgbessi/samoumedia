@@ -1,10 +1,11 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Menu, Home, Languages } from 'lucide-react';
+import { Search, Menu, Home } from 'lucide-react';
 import { useArticles, useCategories, useConfig } from '../lib/hooks';
 import { AdSpace } from './AdSpace';
 import { motion, AnimatePresence } from 'motion/react';
 import { useState, useEffect, type FormEvent } from 'react';
-import { SITE_LANGUAGES, translateSiteTo } from '../lib/translate';
+import { translateSiteTo } from '../lib/translate';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 export default function Header() {
   const { categories } = useCategories();
@@ -13,14 +14,12 @@ export default function Header() {
   const activeCategories = categories.filter(c => c.isActive);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLangOpen, setIsLangOpen] = useState(false);
   const [currentLang, setCurrentLang] = useState('fr');
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
     setIsMenuOpen(false);
-    setIsLangOpen(false);
   }, [location.pathname]);
 
   // Langue mémorisée entre les pages
@@ -35,7 +34,6 @@ export default function Header() {
   const handleLanguage = (code: string) => {
     setCurrentLang(code);
     localStorage.setItem('samou_lang', code);
-    setIsLangOpen(false);
     translateSiteTo(code);
   };
 
@@ -74,34 +72,11 @@ export default function Header() {
             {flashInfoText}
           </motion.div>
         </div>
-        <div className="hidden md:flex items-center gap-4 shrink-0 text-xs font-bold uppercase ml-4">
-          <span>{new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+        {/* Sélecteur de langue — toujours visible (ordinateur + mobile) */}
+        <LanguageSwitcher current={currentLang} onChange={handleLanguage} />
 
-          {/* Traduction du site entier */}
-          <div className="relative">
-            <button
-              onClick={() => setIsLangOpen(!isLangOpen)}
-              title="Changer la langue du site"
-              className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 rounded-full px-2.5 py-1 transition-colors"
-            >
-              <Languages size={14} />
-              <span className="text-[11px] tracking-wider">{SITE_LANGUAGES.find(l => l.code === currentLang)?.label || 'FR'}</span>
-            </button>
-            {isLangOpen && (
-              <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-[60] min-w-[150px]">
-                {SITE_LANGUAGES.map(lang => (
-                  <button
-                    key={lang.code}
-                    onClick={() => handleLanguage(lang.code)}
-                    className={`w-full text-left px-4 py-2.5 text-xs font-bold uppercase tracking-wide transition-colors ${currentLang === lang.code ? 'bg-red-50 text-brand-red' : 'text-gray-700 hover:bg-gray-50'}`}
-                  >
-                    <span className="inline-block w-9 font-black">{lang.label}</span>
-                    <span className="normal-case ml-1 text-gray-500">{lang.name}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+        <div className="hidden md:flex items-center gap-4 shrink-0 text-xs font-bold uppercase ml-2">
+          <span>{new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
 
           <div className="flex gap-1 ml-2">
             <a href={config?.socials?.facebook} className="w-6 h-6 rounded-full bg-[#1877F2] text-white flex items-center justify-center text-xs font-bold">f</a>
@@ -109,32 +84,6 @@ export default function Header() {
             <a href={config?.socials?.youtube} className="w-6 h-6 rounded-full bg-[#FF0000] text-white flex items-center justify-center text-xs font-bold">▶</a>
             <a href={config?.socials?.whatsapp} className="w-6 h-6 rounded-full bg-[#25D366] text-white flex items-center justify-center text-xs font-bold">W</a>
           </div>
-        </div>
-
-        {/* Sélecteur de langue — version mobile (toujours visible) */}
-        <div className="md:hidden relative shrink-0 ml-2">
-          <button
-            onClick={() => setIsLangOpen(!isLangOpen)}
-            title="Changer la langue du site"
-            className="flex items-center gap-1 bg-white/15 rounded-full px-2 py-1"
-          >
-            <Languages size={13} />
-            <span className="text-[10px] font-black tracking-wider">{SITE_LANGUAGES.find(l => l.code === currentLang)?.label || 'FR'}</span>
-          </button>
-          {isLangOpen && (
-            <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-[60] min-w-[150px]">
-              {SITE_LANGUAGES.map(lang => (
-                <button
-                  key={lang.code}
-                  onClick={() => handleLanguage(lang.code)}
-                  className={`w-full text-left px-4 py-2.5 text-xs font-bold uppercase tracking-wide transition-colors ${currentLang === lang.code ? 'bg-red-50 text-brand-red' : 'text-gray-700 hover:bg-gray-50'}`}
-                >
-                  <span className="inline-block w-9 font-black">{lang.label}</span>
-                  <span className="normal-case ml-1 text-gray-500">{lang.name}</span>
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
