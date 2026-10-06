@@ -4,7 +4,7 @@ import { useArticles, useCategories, useConfig } from '../lib/hooks';
 import { AdSpace } from './AdSpace';
 import { motion, AnimatePresence } from 'motion/react';
 import { useState, useEffect, type FormEvent } from 'react';
-import { translateSiteTo } from '../lib/translate';
+import { translateSiteTo, detectCurrentLang } from '../lib/translate';
 import { LanguageSwitcher } from './LanguageSwitcher';
 
 export default function Header() {
@@ -22,12 +22,17 @@ export default function Header() {
     setIsMenuOpen(false);
   }, [location.pathname]);
 
-  // Langue mémorisée entre les pages
+  // Langue courante : déduite de l'URL (miroir traduit) ou mémorisée
   useEffect(() => {
-    const saved = localStorage.getItem('samou_lang');
-    if (saved && saved !== 'fr') {
-      setCurrentLang(saved);
-      setTimeout(() => translateSiteTo(saved), 1200);
+    const detected = detectCurrentLang();
+    setCurrentLang(detected);
+    // Au premier affichage du site original, restaure la préférence mémorisée
+    if (detected === 'fr') {
+      const saved = localStorage.getItem('samou_lang');
+      if (saved && saved !== 'fr') {
+        setCurrentLang(saved);
+        translateSiteTo(saved);
+      }
     }
   }, []);
 

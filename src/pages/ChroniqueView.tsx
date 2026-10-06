@@ -112,11 +112,13 @@ export default function ChroniqueView() {
           </Reveal>
         </div>
 
-        {/* Publicités latérales */}
-        <aside className="w-full lg:w-80 hidden lg:block flex-shrink-0 z-10">
-          <div className="sticky top-24 space-y-6">
+        {/* Publicités latérales — visibles aussi sur mobile */}
+        <aside className="w-full lg:w-80 flex-shrink-0 z-10">
+          <div className="lg:sticky lg:top-24 space-y-6">
             <AdSpace format="square" className="rounded-xl" />
-            <AdSpace format="vertical" className="rounded-xl h-[300px]" />
+            <div className="hidden lg:block">
+              <AdSpace format="vertical" className="rounded-xl h-[300px]" />
+            </div>
           </div>
         </aside>
       </div>
