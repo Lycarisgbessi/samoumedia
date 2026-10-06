@@ -29,6 +29,27 @@ html, body {
   overflow-x: clip;
 }
 
+/* ── Traduction automatique du site (Google Translate) ──
+   On pilote le widget caché depuis notre propre sélecteur du header :
+   on masque donc toute l'interface intrusive de Google. */
+.goog-te-banner-frame.skiptranslate,
+.goog-te-gadget-icon,
+#goog-gt-tt,
+.goog-te-balloon-frame {
+  display: none !important;
+}
+body {
+  top: 0px !important; /* Google décale la page pour sa bannière — on annule */
+}
+.goog-text-highlight {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+font font { /* correction d'inheritance appliquée par Google */
+  background-color: inherit;
+  box-shadow: none !important;
+}
+
 /*
  * Contenu riche (articles / chroniques depuis l'éditeur Quill) :
  * garde-fous responsive — aucun élément ne doit dépasser l'écran sur mobile.

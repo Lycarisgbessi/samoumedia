@@ -53,15 +53,13 @@ export default function AdminAds() {
     if (!file) return;
 
     try {
-      const isGif = file.type === 'image/gif';
       const isVideo = file.type.startsWith('video/');
-
       let base64Payload: string;
-      if (isGif || isVideo) {
-        // GIF animés et vidéos : JAMAIS de compression (elle tuerait l'animation)
-        // → envoi du fichier original, limité à 3 Mo (limite des requêtes Vercel).
+
+      if (isVideo) {
+        // Vidéos : envoyées telles quelles, limitées à 3 Mo (limite des requêtes Vercel).
         if (file.size > MAX_RAW_BYTES) {
-          alert(`Fichier trop lourd (${(file.size / 1024 / 1024).toFixed(1)} Mo).\nLes GIF et vidéos publicitaires doivent peser moins de 3 Mo. Compressez la vidéo (ex: 720p, quelques secondes) puis réessayez.`);
+          alert(`Vidéo trop lourde (${(file.size / 1024 / 1024).toFixed(1)} Mo).\nLes vidéos publicitaires doivent peser moins de 3 Mo. Compressez-la (ex: 720p, quelques secondes) puis réessayez.`);
           return;
         }
         base64Payload = await new Promise<string>((resolve, reject) => {
@@ -71,6 +69,8 @@ export default function AdminAds() {
           reader.readAsDataURL(file);
         });
       } else {
+        // Images ET GIF animés (compression automatiquement contournée pour les GIF,
+        // afin de restituer fidèlement l'animation)
         base64Payload = await compressImage(file, 1200, 0.8);
       }
 
@@ -85,9 +85,9 @@ export default function AdminAds() {
       } else {
         alert('Erreur: ' + data.error);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors de l\'upload:', error);
-      alert("Erreur lors du téléchargement du fichier (trop lourd ou format non supporté).");
+      alert(error?.message || "Erreur lors du téléchargement du fichier (trop lourd ou format non supporté).");
     }
   };
 

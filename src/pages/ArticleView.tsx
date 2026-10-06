@@ -5,30 +5,18 @@ import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Reveal } from '../components/Reveal';
 import { motion, useScroll, useTransform } from 'motion/react';
-import { Calendar, Clock, Share2, Check, Languages } from 'lucide-react';
+import { Calendar, Clock, Share2, Check } from 'lucide-react';
 import { AdSpace } from '../components/AdSpace';
 import DOMPurify from 'dompurify';
 import { useCategories } from '../lib/hooks';
 import { normalizeArticle } from '../lib/text';
 import { FALLBACK_IMAGE, getYouTubeId, getYouTubeThumb, onImageError } from '../lib/media';
 
-const LANGUAGES = [
-  { code: '', label: 'FR', name: 'Français' },
-  { code: 'en', label: 'EN', name: 'English' },
-  { code: 'es', label: 'ES', name: 'Español' },
-  { code: 'zh', label: '中文', name: 'Chinois' },
-  { code: 'ar', label: 'AR', name: 'العربية' },
-  { code: 'pt', label: 'PT', name: 'Português' },
-];
-
 export default function ArticleView() {
   const { slug } = useParams<{ slug: string }>();
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [lang, setLang] = useState('');
-  const [translating, setTranslating] = useState(false);
-  const [translateError, setTranslateError] = useState('');
   const { categories } = useCategories();
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 500], [0, 150]);
@@ -36,8 +24,6 @@ export default function ArticleView() {
 
   useEffect(() => {
     setLoading(true);
-    setLang('');
-    setTranslateError('');
     fetch(`/api/articles/slug/${slug}`, { cache: 'no-store' })
       .then(res => res.ok ? res.json() : Promise.reject())
       .then(data => {
@@ -49,33 +35,6 @@ export default function ArticleView() {
         setLoading(false);
       });
   }, [slug]);
-
-  // Traduction automatique à la demande
-  const handleTranslate = async (code: string) => {
-    if (!code) {
-      // Retour au français : on recharge l'original
-      setLang('');
-      fetch(`/api/articles/slug/${slug}`, { cache: 'no-store' })
-        .then(res => res.ok ? res.json() : Promise.reject())
-        .then(data => setArticle(normalizeArticle(data)))
-        .catch(() => { });
-      return;
-    }
-    setTranslating(true);
-    setTranslateError('');
-    setLang(code);
-    try {
-      const res = await fetch(`/api/articles/slug/${slug}?lang=${code}`, { cache: 'no-store' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Traduction indisponible');
-      setArticle(normalizeArticle(data));
-    } catch (e: any) {
-      setTranslateError(e.message || 'Traduction momentanément indisponible.');
-      setLang('');
-    } finally {
-      setTranslating(false);
-    }
-  };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-brand-dark font-mono text-sm tracking-widest uppercase">Chargement en cours...</div>;
   if (!article) return <div className="min-h-screen flex items-center justify-center text-brand-red font-mono text-sm tracking-widest uppercase">Article introuvable.</div>;
@@ -105,7 +64,7 @@ export default function ArticleView() {
   };
 
   return (
-    <article className="min-h-screen bg-white" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+    <article className="min-h-screen bg-white">
       {/* Immersive Header */}
       <div className="relative h-[60vh] md:h-[70vh] w-full overflow-hidden bg-brand-dark">
         <motion.div style={{ y, opacity }} className="absolute inset-0 origin-top">
@@ -182,31 +141,6 @@ export default function ArticleView() {
                 {copied ? <Check className="w-4 h-4 text-green-600" /> : <Share2 className="w-4 h-4" />}
               </button>
             </div>
-          </div>
-        </Reveal>
-
-        {/* Traduction automatique */}
-        <Reveal delay={0.35}>
-          <div className="flex flex-wrap items-center gap-2 mb-10">
-            <span className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-              <Languages size={14} /> Lire dans une autre langue :
-            </span>
-            {LANGUAGES.map(l => (
-              <button
-                key={l.code || 'fr'}
-                onClick={() => handleTranslate(l.code)}
-                title={l.name}
-                disabled={translating}
-                className={`px-3 py-1.5 rounded-full text-xs font-black border transition-all ${lang === l.code ? 'bg-brand-red text-white border-brand-red' : 'bg-white text-gray-600 border-gray-200 hover:border-brand-red hover:text-brand-red'} disabled:opacity-50`}
-              >
-                {l.label}
-              </button>
-            ))}
-            {translating && <span className="text-xs text-gray-400 font-bold animate-pulse">Traduction en cours…</span>}
-            {translateError && <span className="text-xs text-red-500 font-bold">{translateError}</span>}
-            {lang && !translating && !translateError && (
-              <span className="text-[10px] text-gray-400 italic">Traduction automatique — l'original français reste la référence</span>
-            )}
           </div>
         </Reveal>
 
