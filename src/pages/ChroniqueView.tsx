@@ -7,6 +7,7 @@ import { Calendar, Clock, Eye } from 'lucide-react';
 import { Reveal } from '../components/Reveal';
 import { AdSpace } from '../components/AdSpace';
 import { normalizeArticle } from '../lib/text';
+import { apiUrl } from '../lib/api';
 import { FALLBACK_IMAGE, onImageError } from '../lib/media';
 import type { Chronique } from '../types';
 
@@ -17,7 +18,7 @@ export default function ChroniqueView() {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/chroniques/slug/${slug}`, { cache: 'no-store' })
+    fetch(apiUrl(`/api/chroniques/slug/${slug}`), { cache: 'no-store' })
       .then(res => res.ok ? res.json() : Promise.reject())
       .then(data => setChronique(normalizeArticle(data)))
       .catch(() => setChronique(null))

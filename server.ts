@@ -92,6 +92,22 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
+// CORS : autorise le miroir de traduction Google (*.translate.goog) à appeler
+// l'API du vrai domaine — sinon le site traduit n'afficherait aucun article.
+app.use((req, res, next) => {
+  const origin = req.headers.origin as string | undefined;
+  if (origin && origin.endsWith('.translate.goog')) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    if (req.method === 'OPTIONS') {
+      res.sendStatus(204);
+      return;
+    }
+  }
+  next();
+});
+
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,

@@ -38,7 +38,13 @@ export default function Header() {
 
   const handleLanguage = (code: string) => {
     setCurrentLang(code);
-    localStorage.setItem('samou_lang', code);
+    // FR = retour volontaire au français : on oublie la préférence traduite
+    // pour ne jamais rebasculer automatiquement vers la traduction.
+    if (code === 'fr') {
+      localStorage.removeItem('samou_lang');
+    } else {
+      localStorage.setItem('samou_lang', code);
+    }
     translateSiteTo(code);
   };
 

@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import type { Ad, Article, Category, Chronique, Photo, SiteConfig } from '../types';
 import { normalizeArticle } from './text';
+import { apiUrl } from './api';
 
 export function useCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/categories', { cache: 'no-store' })
+    fetch(apiUrl('/api/categories'), { cache: 'no-store' })
       .then(res => res.json())
       .then((data: Category[]) => setCategories(Array.isArray(data) ? data : []))
       .catch(() => setCategories([]))
@@ -22,7 +23,7 @@ export function useConfig() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/config', { cache: 'no-store' })
+    fetch(apiUrl('/api/config'), { cache: 'no-store' })
       .then(res => res.json())
       .then((data: SiteConfig | null) => setConfig(data))
       .catch(() => setConfig(null))
@@ -41,7 +42,7 @@ export function useAds(location?: string, format?: string) {
     if (location) url += `location=${encodeURIComponent(location)}&`;
     if (format) url += `format=${encodeURIComponent(format)}`;
 
-    fetch(url, { cache: 'no-store' })
+    fetch(apiUrl(url), { cache: 'no-store' })
       .then(res => res.json())
       .then((data: Ad[]) => setAds(Array.isArray(data) ? data.filter(ad => ad.isActive) : []))
       .catch(() => setAds([]))
@@ -65,7 +66,7 @@ export function useArticles(params?: { category?: string; featured?: boolean; li
     if (params?.status) url += `status=${encodeURIComponent(params.status)}&`;
     if (params?.tag) url += `tag=${encodeURIComponent(params.tag)}&`;
 
-    fetch(url, { cache: 'no-store' })
+    fetch(apiUrl(url), { cache: 'no-store' })
       .then(res => res.json())
       .then((data: Article[]) => setArticles(Array.isArray(data) ? data.map(normalizeArticle) : []))
       .catch(() => setArticles([]))
@@ -80,7 +81,7 @@ export function useChroniques() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/chroniques', { cache: 'no-store' })
+    fetch(apiUrl('/api/chroniques'), { cache: 'no-store' })
       .then(res => res.json())
       .then((data: Chronique[]) => setChroniques(Array.isArray(data) ? data.map(normalizeArticle) : []))
       .catch(() => setChroniques([]))
@@ -95,7 +96,7 @@ export function usePhotos() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/photos', { cache: 'no-store' })
+    fetch(apiUrl('/api/photos'), { cache: 'no-store' })
       .then(res => res.json())
       .then((data: Photo[]) => setPhotos(Array.isArray(data) ? data : []))
       .catch(() => setPhotos([]))

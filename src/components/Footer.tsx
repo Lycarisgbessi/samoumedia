@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Facebook, Twitter, Youtube, MapPin, Mail, Phone } from 'lucide-react';
 import { useCategories, useConfig } from '../lib/hooks';
 import { PwaButtons } from './PwaButtons';
+import { apiUrl } from '../lib/api';
 
 export default function Footer() {
   const { categories } = useCategories();
@@ -53,7 +54,7 @@ export default function Footer() {
               const form = e.target as HTMLFormElement;
               const email = (form.elements.namedItem('email') as HTMLInputElement).value;
               try {
-                const res = await fetch('/api/subscribe', {
+                const res = await fetch(apiUrl('/api/subscribe'), {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ email })

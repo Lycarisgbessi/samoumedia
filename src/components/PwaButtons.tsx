@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Download, Bell, BellRing } from 'lucide-react';
+import { apiUrl } from '../lib/api';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -52,7 +53,7 @@ export function PwaButtons() {
       setNotificationState(permission);
       if (permission !== 'granted') return;
 
-      const keyRes = await fetch('/api/push/key');
+      const keyRes = await fetch(apiUrl('/api/push/key'));
       const vapidKey = await keyRes.text();
       if (!vapidKey) {
         alert('Notifications non configurées sur le serveur.');
@@ -68,7 +69,7 @@ export function PwaButtons() {
         });
       }
 
-      await fetch('/api/push/subscribe', {
+      await fetch(apiUrl('/api/push/subscribe'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(sub.toJSON())

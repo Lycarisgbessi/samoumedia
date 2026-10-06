@@ -10,6 +10,7 @@ import { AdSpace } from '../components/AdSpace';
 import DOMPurify from 'dompurify';
 import { useCategories } from '../lib/hooks';
 import { normalizeArticle } from '../lib/text';
+import { apiUrl } from '../lib/api';
 import { FALLBACK_IMAGE, getYouTubeId, getYouTubeThumb, onImageError } from '../lib/media';
 
 export default function ArticleView() {
@@ -24,7 +25,7 @@ export default function ArticleView() {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/articles/slug/${slug}`, { cache: 'no-store' })
+    fetch(apiUrl(`/api/articles/slug/${slug}`), { cache: 'no-store' })
       .then(res => res.ok ? res.json() : Promise.reject())
       .then(data => {
         setArticle(normalizeArticle(data));
