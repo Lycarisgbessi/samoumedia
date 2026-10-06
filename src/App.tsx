@@ -12,12 +12,24 @@ import Lenis from '@studio-freight/lenis';
 import { CustomCursor } from './components/CustomCursor';
 import { uiSound } from './lib/sound';
 import { PopupAd } from './components/PopupAd';
+import { trackPageView } from './lib/track';
 
 // Scroll to top on route change
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
     window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
+
+// Statistiques d'audience : enregistre chaque page publique visitée
+function Analytics() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    if (!pathname.startsWith('/admin')) {
+      trackPageView(pathname);
+    }
   }, [pathname]);
   return null;
 }
@@ -74,6 +86,7 @@ export default function App() {
       />
       <CustomCursor />
       <ScrollToTop />
+      <Analytics />
       <Header />
       <PopupAd />
       <AnimatePresence mode="wait">

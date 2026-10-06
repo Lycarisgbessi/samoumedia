@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Facebook, Twitter, Youtube, MapPin, Mail, Phone } from 'lucide-react';
 import { useCategories, useConfig } from '../lib/hooks';
+import { PwaButtons } from './PwaButtons';
 
 export default function Footer() {
   const { categories } = useCategories();
@@ -26,16 +27,19 @@ export default function Footer() {
           <p className="text-gray-600 text-sm mb-6 leading-relaxed">
             {config?.slogan || 'Premier média en ligne de Samou Benty et de Forécariah. Nous informons avec rigueur, valorisons notre communauté et racontons la Guinée au quotidien.'}
           </p>
-          <div className="flex gap-2">
-            <a href={config?.socials?.facebook} className="w-8 h-8 rounded-full bg-gray-300 text-gray-700 flex items-center justify-center hover:bg-[#1877F2] hover:text-white transition-colors">
-              <Facebook size={16} />
-            </a>
-            <a href={config?.socials?.twitter} className="w-8 h-8 rounded-full bg-gray-300 text-gray-700 flex items-center justify-center hover:bg-black hover:text-white transition-colors">
-              <Twitter size={16} />
-            </a>
-            <a href={config?.socials?.youtube} className="w-8 h-8 rounded-full bg-gray-300 text-gray-700 flex items-center justify-center hover:bg-[#FF0000] hover:text-white transition-colors">
-              <Youtube size={16} />
-            </a>
+          <div className="flex flex-col gap-3">
+            <div className="flex gap-2">
+              <a href={config?.socials?.facebook || '#'} target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-full bg-gray-300 text-gray-700 flex items-center justify-center hover:bg-[#1877F2] hover:text-white transition-colors">
+                <Facebook size={16} />
+              </a>
+              <a href={config?.socials?.twitter || '#'} target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-full bg-gray-300 text-gray-700 flex items-center justify-center hover:bg-black hover:text-white transition-colors">
+                <Twitter size={16} />
+              </a>
+              <a href={config?.socials?.youtube || '#'} target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-full bg-gray-300 text-gray-700 flex items-center justify-center hover:bg-[#FF0000] hover:text-white transition-colors">
+                <Youtube size={16} />
+              </a>
+            </div>
+            <PwaButtons />
           </div>
         </div>
 

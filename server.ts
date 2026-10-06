@@ -10,6 +10,7 @@ import bcrypt from 'bcryptjs';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
+import webpush from 'web-push';
 
 const prisma = new PrismaClient();
 const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
@@ -364,6 +365,15 @@ app.get('/api/articles', asyncHandler(async (req: any, res: any) => {
       { excerpt: { contains: search, mode: 'insensitive' } },
       { content: { contains: search, mode: 'insensitive' } }
     ];
+    // Statistiques internes : terme recherché (tendances de l'audience)
+    if (search.length >= 2) {
+      const term = search.toLowerCase().trim().substring(0, 80);
+      prisma.searchTerm.upsert({
+        where: { term },
+        update: { count: { increment: 1 }, lastSearched: new Date() },
+        create: { term }
+      }).catch(() => { });
+    }
   }
   const orderBy: any = sort === 'views' ? { views: 'desc' } : { date: 'desc' };
   res.json(await prisma.article.findMany({ where, orderBy, take: limit ? parseInt(limit as string, 10) : undefined }));
@@ -374,11 +384,108 @@ app.get('/api/articles/:id', asyncHandler(async (req: any, res: any) => {
     res.json(article);
   } else res.status(404).json({ error: 'Not found' });
 }));
+// ─── Traduction automatique (articles) ──────────────────────────
+// Chaîne de fournisseurs : Gemini (si GEMINI_API_KEY) → MyMemory (gratuit sans clé).
+// Les traductions sont mises en cache dans Article.translations.
+
+const SUPPORTED_LANGS: Record<string, string> = {
+  en: 'anglais', es: 'espagnol', zh: 'chinois', ar: 'arabe', pt: 'portugais'
+};
+
+async function translateWithGemini(texts: string[], targetLang: string): Promise<string[] | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  try {
+    const { GoogleGenAI } = await import('@google/genai');
+    const ai = new GoogleGenAI({ apiKey });
+    const prompt = `Traduis chaque bloc suivant en ${targetLang}, en conservant exactement la mise en forme HTML et les balises. Réponds UNIQUEMENT par les blocs traduits, séparés par la ligne "|||".\n\n${texts.join('\n|||\n')}`;
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: prompt
+    });
+    const out = (response.text || '').split('|||').map((s: string) => s.trim());
+    return out.length === texts.length ? out : null;
+  } catch {
+    return null;
+  }
+}
+
+async function translateWithMyMemory(text: string, target: string): Promise<string | null> {
+  try {
+    const limited = text.substring(0, 480);
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(limited)}&langpair=fr|${target}`;
+    const res = await fetch(url);
+    const data = await res.json() as any;
+    const translated = data?.responseData?.translatedText;
+    return typeof translated === 'string' && !translated.startsWith('MYMEMORY WARNING') ? translated : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Découpe le HTML en blocs (p, h1-h3, li) et traduit chaque texte intérieur. */
+async function translateHtml(html: string, langCode: string, langName: string): Promise<string | null> {
+  // 1. Tentative Gemini (traduit tout le HTML d'un coup, mise en forme conservée)
+  const viaGemini = await translateWithGemini([html], langName);
+  if (viaGemini && viaGemini[0]) return viaGemini[0];
+
+  // 2. Repli MyMemory : bloc par bloc, texte intérieur uniquement
+  const blocks = html.split(/(?=<\/?(?:p|h[1-3]|li)[>\s])/).filter(b => b.trim());
+  const out: string[] = [];
+  for (const block of blocks) {
+    const m = block.match(/^(<[^>]+>)([\s\S]*?)(<\/[^>]+>)$/);
+    if (m) {
+      const inner = m[2].replace(/<[^>]+>/g, ' ').trim();
+      if (inner) {
+        const translated = await translateWithMyMemory(inner, langCode);
+        out.push(m[1] + (translated || inner) + m[3]);
+        continue;
+      }
+    }
+    const plain = block.replace(/<[^>]+>/g, ' ').trim();
+    if (plain) {
+      const translated = await translateWithMyMemory(plain, langCode);
+      out.push(translated || block);
+    } else {
+      out.push(block);
+    }
+  }
+  return out.join('');
+}
+
 app.get('/api/articles/slug/:slug', asyncHandler(async (req: any, res: any) => {
   const article = await prisma.article.findUnique({ where: { slug: req.params.slug } });
   if (article && !article.isDeleted) {
     await prisma.article.update({ where: { id: article.id }, data: { views: { increment: 1 } } });
     article.views += 1;
+
+    // Traduction à la demande (?lang=en|es|zh|ar|pt), mise en cache
+    const lang = req.query.lang as string;
+    if (lang && SUPPORTED_LANGS[lang]) {
+      const cached = (article.translations as any)?.[lang];
+      if (cached?.title) {
+        return res.json({ ...article, title: cached.title, excerpt: cached.excerpt, content: cached.content, translated: true });
+      }
+      const [title, excerpt, content] = await Promise.all([
+        translateWithMyMemory(article.title || '', lang) as Promise<string | null>,
+        translateWithMyMemory(article.excerpt || '', lang) as Promise<string | null>,
+        translateHtml(article.content || '', lang, SUPPORTED_LANGS[lang])
+      ]);
+      if (title || content) {
+        const translation = {
+          title: title || article.title,
+          excerpt: excerpt || article.excerpt,
+          content: content || article.content
+        };
+        await prisma.article.update({
+          where: { id: article.id },
+          data: { translations: { ...(article.translations as any || {}), [lang]: translation } }
+        }).catch(() => { });
+        return res.json({ ...article, ...translation, translated: true });
+      }
+      return res.status(503).json({ error: 'Service de traduction momentanément indisponible. Réessayez plus tard.' });
+    }
+
     res.json(article);
   } else res.status(404).json({ error: 'Not found' });
 }));
@@ -386,6 +493,14 @@ app.post('/api/articles', authenticateToken, asyncHandler(async (req: any, res: 
   const validData = articleSchema.parse(req.body);
   const slug = generateSlug(validData.title);
   const newArticle = await prisma.article.create({ data: { ...validData, slug, date: new Date(), views: 0 } });
+  // Notification push à tous les abonnés dès qu'un article est PUBLIÉ
+  if (validData.status === 'PUBLISHED') {
+    notifyAllSubscribers(
+      'SAMOU MÉDIA — Nouvel article',
+      validData.title,
+      `/article/${slug}`
+    ).catch(() => { });
+  }
   res.json(newArticle);
 }));
 app.put('/api/articles/:id', authenticateToken, asyncHandler(async (req: any, res: any) => {
@@ -478,6 +593,147 @@ app.use((err: any, req: any, res: any, next: any) => {
 if (!process.env.VERCEL) {
   app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
 }
+
+// ─── Notifications push (Web Push / VAPID) ──────────────────────
+const vapidPublicKey = process.env.VAPID_PUBLIC_KEY || '';
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || '';
+if (vapidPublicKey && vapidPrivateKey) {
+  webpush.setVapidDetails('mailto:contact@samoumedia.com', vapidPublicKey, vapidPrivateKey);
+}
+
+app.get('/api/push/key', (req, res) => res.send(vapidPublicKey));
+
+app.post('/api/push/subscribe', asyncHandler(async (req: any, res: any) => {
+  const { endpoint, keys } = req.body || {};
+  if (!endpoint || !keys?.p256dh || !keys?.auth) return res.status(400).json({ error: 'Abonnement invalide' });
+  await prisma.pushSubscription.upsert({
+    where: { endpoint },
+    update: { p256dh: keys.p256dh, auth: keys.auth },
+    create: { endpoint, p256dh: keys.p256dh, auth: keys.auth }
+  });
+  res.json({ success: true });
+}));
+
+app.post('/api/push/unsubscribe', asyncHandler(async (req: any, res: any) => {
+  const { endpoint } = req.body || {};
+  if (endpoint) await prisma.pushSubscription.deleteMany({ where: { endpoint } });
+  res.json({ success: true });
+}));
+
+/** Envoie une notification push à tous les abonnés (best effort). */
+async function notifyAllSubscribers(title: string, body: string, url: string) {
+  if (!vapidPublicKey || !vapidPrivateKey) return;
+  const subs = await prisma.pushSubscription.findMany();
+  await Promise.allSettled(subs.map(async (sub: any) => {
+    try {
+      await webpush.sendNotification(
+        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+        JSON.stringify({ title, body, url })
+      );
+    } catch (err: any) {
+      // Abonnement expiré/invalidé (410/404) → on le supprime
+      if (err?.statusCode === 404 || err?.statusCode === 410) {
+        await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => { });
+      }
+    }
+  }));
+}
+
+// ─── Statistiques : collecte ────────────────────────────────────
+const trackSchema = z.object({
+  type: z.enum(['view', 'ad']),
+  path: z.string().optional(),
+  adId: z.string().optional(),
+  adEvent: z.enum(['impression', 'click']).optional(),
+  referrer: z.string().optional()
+});
+
+app.post('/api/track', asyncHandler(async (req: any, res: any) => {
+  const data = trackSchema.parse(req.body);
+
+  if (data.type === 'ad' && data.adId && data.adEvent) {
+    await prisma.adEvent.create({ data: { adId: data.adId, type: data.adEvent } });
+  } else if (data.type === 'view' && data.path) {
+    // Résolution de l'article pour /article/<slug> (permet les stats par article)
+    let articleId: string | undefined;
+    if (data.path.startsWith('/article/')) {
+      const slug = data.path.split('/')[2];
+      const article = await prisma.article.findUnique({ where: { slug }, select: { id: true } });
+      articleId = article?.id;
+    }
+    await prisma.pageView.create({
+      data: { path: data.path.substring(0, 200), articleId, referrer: data.referrer?.substring(0, 300) || null }
+    });
+  }
+  res.json({ success: true });
+}));
+
+// ─── Statistiques : agrégation (tableau de bord) ────────────────
+app.get('/api/stats/overview', authenticateToken, asyncHandler(async (req: any, res: any) => {
+  const [totals] = await prisma.$queryRaw<any[]>`
+    SELECT
+      (SELECT COUNT(*) FROM "PageView" WHERE "createdAt" >= CURRENT_DATE)::int AS today,
+      (SELECT COUNT(*) FROM "PageView" WHERE "createdAt" >= CURRENT_DATE - INTERVAL '7 days')::int AS week,
+      (SELECT COUNT(*) FROM "PageView" WHERE "createdAt" >= CURRENT_DATE - INTERVAL '30 days')::int AS month,
+      (SELECT COUNT(*) FROM "PageView")::int AS total`;
+
+  const byDay = await prisma.$queryRaw<any[]>`
+    SELECT to_char("createdAt", 'YYYY-MM-DD') AS day, COUNT(*)::int AS count
+    FROM "PageView" WHERE "createdAt" >= CURRENT_DATE - INTERVAL '13 days'
+    GROUP BY 1 ORDER BY 1`;
+
+  // Heat map : jour de la semaine (0=dimanche) × heure, sur 30 jours
+  const heat = await prisma.$queryRaw<any[]>`
+    SELECT EXTRACT(DOW FROM "createdAt")::int AS dow, EXTRACT(HOUR FROM "createdAt")::int AS hour, COUNT(*)::int AS count
+    FROM "PageView" WHERE "createdAt" >= CURRENT_DATE - INTERVAL '30 days'
+    GROUP BY 1, 2`;
+
+  const topArticlesRaw = await prisma.$queryRaw<any[]>`
+    SELECT pv."articleId" AS id, COUNT(*)::int AS recentViews
+    FROM "PageView" pv
+    WHERE pv."articleId" IS NOT NULL AND pv."createdAt" >= CURRENT_DATE - INTERVAL '30 days'
+    GROUP BY 1 ORDER BY 2 DESC LIMIT 8`;
+  const articleIds = topArticlesRaw.map((r: any) => r.id);
+  const articles = await prisma.article.findMany({
+    where: { id: { in: articleIds } },
+    select: { id: true, title: true, slug: true, views: true, status: true }
+  });
+  const topArticles = topArticlesRaw.map((r: any) => {
+    const a = articles.find(x => x.id === r.id);
+    return a ? { ...a, recentViews: r.recentViews } : null;
+  }).filter(Boolean);
+
+  const adsRaw = await prisma.$queryRaw<any[]>`
+    SELECT "adId" AS id,
+      COUNT(*) FILTER (WHERE type = 'impression')::int AS impressions,
+      COUNT(*) FILTER (WHERE type = 'click')::int AS clicks
+    FROM "AdEvent" WHERE "createdAt" >= CURRENT_DATE - INTERVAL '30 days'
+    GROUP BY 1 ORDER BY impressions DESC`;
+  const adsList = await prisma.adSpace.findMany({
+    where: { id: { in: adsRaw.map((r: any) => r.id) } },
+    select: { id: true, name: true, format: true, location: true, isActive: true }
+  });
+  const ads = adsRaw.map((r: any) => {
+    const ad = adsList.find(x => x.id === r.id);
+    return ad ? { ...ad, impressions: r.impressions, clicks: r.clicks, ctr: r.impressions > 0 ? Math.round((r.clicks / r.impressions) * 1000) / 10 : 0 } : null;
+  }).filter(Boolean);
+
+  const topSearches = await prisma.searchTerm.findMany({
+    orderBy: [{ count: 'desc' }], take: 8, select: { term: true, count: true }
+  });
+
+  const counts = {
+    articles: await prisma.article.count({ where: { isDeleted: false } }),
+    published: await prisma.article.count({ where: { isDeleted: false, status: 'PUBLISHED' } }),
+    drafts: await prisma.article.count({ where: { isDeleted: false, status: 'DRAFT' } }),
+    chroniques: await prisma.chronique.count({ where: { isDeleted: false } }),
+    subscribers: await prisma.subscriber.count(),
+    photos: await prisma.photo.count(),
+    pushSubscribers: await prisma.pushSubscription.count()
+  };
+
+  res.json({ ...totals, byDay, heat, topArticles, ads, topSearches, counts });
+}));
 
 if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   import('vite').then(({ createServer }) => {

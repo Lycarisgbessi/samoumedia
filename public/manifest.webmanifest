@@ -1,0 +1,23 @@
+{
+  "name": "SAMOU MÉDIA — Informer. Éclairer. Rassembler.",
+  "short_name": "SAMOU MÉDIA",
+  "description": "Toute l'actualité de Samou Benty, Forécariah et de la Guinée en continu.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#E30613",
+  "lang": "fr",
+  "categories": ["news", "magazines"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Dernières actualités", "url": "/" },
+    { "name": "Vidéos & Reportages", "url": "/reportages" },
+    { "name": "Rechercher", "url": "/recherche" }
+  ]
+}

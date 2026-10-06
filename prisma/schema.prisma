@@ -61,6 +61,9 @@ model Article {
   titleFont   String?
   excerptFont String?
   contentFont String?
+
+  // Traductions automatiques mises en cache : { en: {title, excerpt, content}, es: {...}, ... }
+  translations Json?
   
   date       DateTime @default(now())
   readTime   String?
@@ -147,4 +150,49 @@ model Photo {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
+}
+
+// ─── Statistiques ───────────────────────────────────────────────
+
+// Chaque visite d'une page publique (accueil, article, chronique...)
+model PageView {
+  id        String   @id @default(cuid())
+  path      String
+  articleId String?  // renseigné pour /article/<slug>
+  referrer  String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([articleId])
+}
+
+// Impressions et clics publicitaires
+model AdEvent {
+  id        String   @id @default(cuid())
+  adId      String
+  type      String   // "impression" | "click"
+  createdAt DateTime @default(now())
+
+  @@index([adId])
+  @@index([createdAt])
+}
+
+// Termes recherchés dans la barre de recherche (tendances internes)
+model SearchTerm {
+  id           String   @id @default(cuid())
+  term         String
+  count        Int      @default(1)
+  lastSearched DateTime @default(now())
+
+  @@unique([term])
+}
+
+// ─── Notifications push ─────────────────────────────────────────
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
 }

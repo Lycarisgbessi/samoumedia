@@ -7,6 +7,7 @@ import { authFetch } from '../../lib/auth';
 import { compressImage } from '../../utils/imageCompression';
 import { FALLBACK_IMAGE, getYouTubeId, onImageError } from '../../lib/media';
 import { FONT_OPTIONS } from '../../lib/fonts';
+import { useSeoAnalysis } from '../../lib/seo';
 
 const DRAFT_KEY = 'samou_draft_article';
 
@@ -22,6 +23,15 @@ export default function AdminArticles() {
   // le contenu est proposé à la restauration au retour.
   const [recoverableDraft, setRecoverableDraft] = useState<any>(null);
   const quillRef = useRef<any>(null);
+
+  // Moteur SEO : analyse en temps réel pendant la rédaction
+  const seo = useSeoAnalysis(
+    currentArticle?.title || '',
+    currentArticle?.excerpt || '',
+    currentArticle?.content || '',
+    currentArticle?.tags || [],
+    isEditing
+  );
 
   // Search and Pagination
   const [searchTerm, setSearchTerm] = useState('');
@@ -409,6 +419,62 @@ export default function AdminArticles() {
               <input type="checkbox" id="featured" checked={currentArticle.isFeatured || false} onChange={e => setCurrentArticle({...currentArticle, isFeatured: e.target.checked})} className="rounded text-brand-red focus:ring-brand-red w-5 h-5" />
               <label htmlFor="featured" className="font-medium text-gray-700">Mettre à la Une (Carrousel principal)</label>
             </div>
+
+            {/* ── Moteur SEO : analyse en temps réel ── */}
+            {seo && (
+              <div className="bg-gradient-to-br from-gray-50 to-blue-50/40 border border-gray-200 rounded-xl p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-black text-gray-900 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-brand-red animate-pulse" />
+                    Assistant SEO — sera-t-il lu ?
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl font-black tabular-nums" style={{ color: seo.score >= 75 ? '#16a34a' : seo.score >= 50 ? '#d97706' : '#dc2626' }}>{seo.score}</span>
+                    <span className="text-xs text-gray-400 font-bold">/100</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 mb-4">
+                  {seo.checks.map(c => (
+                    <div key={c.label} className={`flex items-start gap-2 text-xs ${c.ok ? 'text-green-700' : 'text-gray-600'}`} title={c.advice}>
+                      <span className={`shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black text-white mt-0.5 ${c.ok ? 'bg-green-500' : 'bg-gray-300'}`}>{c.ok ? '✓' : '!'}</span>
+                      <span className="font-bold">{c.label}{!c.ok && <span className="block font-medium text-gray-400">{c.advice}</span>}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="border-t border-gray-200 pt-4 space-y-3">
+                  <div>
+                    <p className="text-xs font-black text-gray-700 uppercase tracking-wide mb-2">Mots-clés de votre article (à mettre en avant)</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {seo.keywords.map(k => (
+                        <button
+                          type="button"
+                          key={k.word}
+                          onClick={() => {
+                            const title = currentArticle.title || '';
+                            if (!title.toLowerCase().includes(k.word)) {
+                              setCurrentArticle(prev => ({ ...prev, title: `${title} ${k.word.charAt(0).toUpperCase() + k.word.slice(1)}`.trim() }));
+                            }
+                          }}
+                          title={k.inTitle ? 'Déjà dans le titre ✓ — cliquez pour l\'ajouter aux tags' : 'Cliquez pour ajouter au titre'}
+                          className={`px-2.5 py-1 rounded-full text-xs font-bold border transition-colors ${k.inTitle ? 'bg-green-100 text-green-700 border-green-200' : 'bg-white text-gray-700 border-gray-200 hover:border-brand-red hover:text-brand-red'}`}
+                        >
+                          {k.word} <span className="opacity-50">×{k.count}</span>
+                        </button>
+                      ))}
+                      {seo.keywords.length === 0 && <span className="text-xs text-gray-400 italic">Écrivez le contenu pour voir apparaître vos mots-clés.</span>}
+                    </div>
+                  </div>
+                  {seo.powerWordsFound.length > 0 && (
+                    <p className="text-xs text-gray-600">
+                      <span className="font-black text-gray-700">Mots accrocheurs détectés :</span> {seo.powerWordsFound.slice(0, 8).join(', ')}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-end pt-4 border-t">
               <button type="submit" className="bg-brand-red text-white px-6 py-2 rounded-lg flex items-center gap-2">
                 <Save size={20} />

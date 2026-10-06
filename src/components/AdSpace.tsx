@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { useAds } from '../lib/hooks';
+import { trackAdEvent } from '../lib/track';
 
 interface AdSpaceProps {
   format?: 'horizontal' | 'vertical' | 'square' | 'in-article';
@@ -14,6 +16,13 @@ export function isVideoAd(url?: string | null): boolean {
 
 export function AdSpace({ format = 'horizontal', location, className = '' }: AdSpaceProps) {
   const { ads, loading } = useAds(location, format);
+
+  // Statistiques : une impression par publicité affichée
+  useEffect(() => {
+    if (!loading && ads.length > 0 && ads[0].id) {
+      trackAdEvent(ads[0].id, 'impression');
+    }
+  }, [loading, ads]);
 
   // Dimensions du conteneur de repli (« Votre publicité ici ») et hauteurs max
   // par format. Les créations réelles s'affichent ENTIÈRES (object-contain,
@@ -34,7 +43,13 @@ export function AdSpace({ format = 'horizontal', location, className = '' }: AdS
   if (!loading && ads.length > 0) {
     const ad = ads[0]; // Select the first matched ad
     return (
-      <a href={ad.targetUrl || '#'} target="_blank" rel="noopener noreferrer" className={`block overflow-hidden relative group z-20 w-full bg-white ${className}`}>
+      <a
+        href={ad.targetUrl || '#'}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => trackAdEvent(ad.id, 'click')}
+        className={`block overflow-hidden relative group z-20 w-full bg-white ${className}`}
+      >
         {isVideoAd(ad.imageUrl) ? (
           <video
             src={ad.imageUrl || undefined}

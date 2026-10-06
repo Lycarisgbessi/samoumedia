@@ -26,6 +26,15 @@ import AdminPhotos from './pages/admin/AdminPhotos.tsx';
 
 import './index.css';
 
+// PWA : enregistrement du service worker (application installable + notifications)
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      /* l'échec du SW ne doit jamais empêcher le site de fonctionner */
+    });
+  });
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>

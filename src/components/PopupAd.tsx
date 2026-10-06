@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X } from 'lucide-react';
 import { useAds } from '../lib/hooks';
 import { isVideoAd } from './AdSpace';
+import { trackAdEvent } from '../lib/track';
 
 export function PopupAd() {
   const [isVisible, setIsVisible] = useState(false);
@@ -13,6 +14,7 @@ export function PopupAd() {
     const timer = setTimeout(() => {
       if (ads && ads.length > 0) {
         setIsVisible(true);
+        trackAdEvent(ads[0].id, 'impression');
       }
     }, 12000);
 
@@ -50,11 +52,11 @@ export function PopupAd() {
           <div className="p-6">
             <h3 className="font-bold text-brand-dark mb-2 text-sm">{ad.name}</h3>
             <p className="text-xs text-gray-500 mb-5 leading-relaxed">Découvrez cette offre partenaire de Samou Média.</p>
-            <a 
+            <a
               href={ad.targetUrl}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => setIsVisible(false)}
+              onClick={() => { trackAdEvent(ad.id, 'click'); setIsVisible(false); }}
               className="block text-center w-full py-2.5 bg-brand-dark text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-brand-red transition-colors duration-300"
             >
               En savoir plus
