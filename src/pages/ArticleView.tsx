@@ -2,7 +2,7 @@ import { useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import type { Article } from '../types';
 import { formatDistanceToNow } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { fr, enUS, es, zhCN, ar, pt } from 'date-fns/locale';
 import { Reveal } from '../components/Reveal';
 import { motion, useScroll, useTransform } from 'motion/react';
 import { Calendar, Clock, Share2, Check } from 'lucide-react';
@@ -11,7 +11,7 @@ import DOMPurify from 'dompurify';
 import { useCategories } from '../lib/hooks';
 import { normalizeArticle } from '../lib/text';
 import { apiUrl } from '../lib/api';
-import { useI18n, useLang } from '../lib/lang';
+import { useI18n, useLang, dateLocale } from '../lib/lang';
 import { FALLBACK_IMAGE, getYouTubeId, getYouTubeThumb, onImageError } from '../lib/media';
 
 export default function ArticleView() {
@@ -90,7 +90,7 @@ export default function ArticleView() {
                 </span>
                 <span className="text-gray-300 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
                   <Calendar className="w-3.5 h-3.5" />
-                  {formatDistanceToNow(new Date(article.date), { addSuffix: true, locale: fr })}
+                  {formatDistanceToNow(new Date(article.date), { addSuffix: true, locale: dateLocale(lang) })}
                 </span>
               </div>
             </Reveal>

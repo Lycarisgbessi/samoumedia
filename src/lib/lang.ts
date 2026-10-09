@@ -4,12 +4,34 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { tFor } from './i18n';
+import { fr, enUS, es, zhCN, ar, pt } from 'date-fns/locale';
+import type { Locale } from 'date-fns';
+
+const VALID_LANGS = ['en', 'es', 'zh-CN', 'ar', 'pt'];
 
 export function useLang(): string {
   const [searchParams] = useSearchParams();
-  const lang = searchParams.get('lang') || '';
-  const valid = ['en', 'es', 'zh-CN', 'ar', 'pt'];
-  return valid.includes(lang) ? lang : 'fr';
+  // L'administration reste toujours en français
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) return 'fr';
+  const urlLang = searchParams.get('lang') || '';
+  if (VALID_LANGS.includes(urlLang)) return urlLang;
+  // Pas de ?lang= dans l'URL (navigation interne entre pages) : on reprend
+  // la langue choisie et mémorisée — sinon la langue serait perdue à chaque clic.
+  try {
+    const saved = localStorage.getItem('samou_lang');
+    if (saved && VALID_LANGS.includes(saved)) return saved;
+  } catch { }
+  return 'fr';
+}
+
+/** Code de locale BCP47 adapté à la langue (dates, nombres). */
+export function localeTag(lang: string): string {
+  return ({ en: 'en-GB', es: 'es-ES', 'zh-CN': 'zh-CN', ar: 'ar', pt: 'pt-PT' } as Record<string, string>)[lang] || 'fr-FR';
+}
+
+/** Locale date-fns adaptée à la langue (dates relatives : « il y a 2 h » / « 2h ago »). */
+export function dateLocale(lang: string): Locale {
+  return ({ en: enUS, es, 'zh-CN': zhCN, ar, pt } as Record<string, Locale>)[lang] || fr;
 }
 
 /** Change la langue de tout le site : met ?lang= dans l'URL et recharge la page.

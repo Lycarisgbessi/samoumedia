@@ -4,11 +4,11 @@ import { Play, ChevronLeft, ChevronRight, Facebook, Twitter, Youtube, X } from '
 import { AdSpace } from '../components/AdSpace';
 import { SectionRibbon } from '../components/SectionRibbon';
 import { useArticles, useCategories, useChroniques, useConfig, usePhotos } from '../lib/hooks';
-import { useI18n } from '../lib/lang';
+import { useI18n, localeTag } from '../lib/lang';
 import { FALLBACK_IMAGE, getArticleImage, onImageError } from '../lib/media';
 
 export default function Home() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { articles, loading: articlesLoading } = useArticles();
   const { categories } = useCategories();
   const { chroniques } = useChroniques();
@@ -101,7 +101,7 @@ export default function Home() {
                 <div className="flex items-center text-gray-300 text-xs">
                   <span className="uppercase">{mainFeatured.author}</span>
                   <span className="mx-2">•</span>
-                  <span>{new Date(mainFeatured.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                  <span>{new Date(mainFeatured.date).toLocaleDateString(localeTag(lang), { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                 </div>
               </div>
               <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
@@ -128,7 +128,7 @@ export default function Home() {
                   {article.title}
                 </h3>
                 <span className="text-[10px] text-gray-500 mt-auto pt-2 uppercase">
-                  {new Date(article.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  {new Date(article.date).toLocaleDateString(localeTag(lang), { day: 'numeric', month: 'long', year: 'numeric' })}
                 </span>
               </div>
             </Link>
@@ -181,7 +181,7 @@ export default function Home() {
                   {article.title}
                 </h3>
                 <span className="text-[10px] text-gray-500 uppercase">
-                  {new Date(article.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  {new Date(article.date).toLocaleDateString(localeTag(lang), { day: 'numeric', month: 'long', year: 'numeric' })}
                 </span>
               </Link>
             ))}

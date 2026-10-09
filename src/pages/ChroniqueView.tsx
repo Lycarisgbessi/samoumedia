@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { fr, enUS, es, zhCN, ar, pt } from 'date-fns/locale';
 import DOMPurify from 'dompurify';
 import { Calendar, Clock, Eye } from 'lucide-react';
 import { Reveal } from '../components/Reveal';
 import { AdSpace } from '../components/AdSpace';
 import { normalizeArticle } from '../lib/text';
 import { apiUrl } from '../lib/api';
-import { useI18n, useLang } from '../lib/lang';
+import { useI18n, useLang, dateLocale } from '../lib/lang';
 import { FALLBACK_IMAGE, onImageError } from '../lib/media';
 import type { Chronique } from '../types';
 
@@ -75,7 +75,7 @@ export default function ChroniqueView() {
                 </div>
               </div>
               <div className="flex flex-col items-end gap-2 text-xs text-gray-400 font-bold uppercase tracking-wider">
-                <span className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5" /> {formatDistanceToNow(new Date(chronique.date), { addSuffix: true, locale: fr })}</span>
+                <span className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5" /> {formatDistanceToNow(new Date(chronique.date), { addSuffix: true, locale: dateLocale(lang) })}</span>
                 <span className="flex items-center gap-2"><Eye className="w-3.5 h-3.5" /> {chronique.views} {t('views')}</span>
               </div>
             </div>

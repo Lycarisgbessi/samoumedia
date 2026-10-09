@@ -544,6 +544,43 @@ async function translateWithMyMemory(text: string, target: string): Promise<stri
   }
 }
 
+/** Découpe un texte en segments ≤ 480 caractères (frontières de phrases). */
+function chunkText(text: string, max = 480): string[] {
+  const chunks: string[] = [];
+  let rest = text.trim();
+  while (rest.length > max) {
+    let cut = rest.lastIndexOf('.', max);
+    if (cut < max * 0.5) cut = rest.lastIndexOf(' ', max);
+    if (cut <= 0) cut = max;
+    chunks.push(rest.substring(0, cut + 1).trim());
+    rest = rest.substring(cut + 1).trim();
+  }
+  if (rest) chunks.push(rest);
+  return chunks;
+}
+
+/** Via MyMemory : traduit un contenu HTML SANS le tronquer ni perdre la mise
+ *  en forme (blocs traduits par segments, balises conservées). */
+async function translateHtmlMyMemory(html: string, target: string, maxChars = 6000): Promise<string | null> {
+  if (html.length > maxChars) return null; // trop long pour le secours gratuit → français conservé
+  const blocks = html.split(/(?=<\/?(?:p|h[1-3]|li|blockquote)[>\s])/).filter(b => b.trim());
+  const out: string[] = [];
+  for (const block of blocks) {
+    const m = block.match(/^(<[^>]+>)([\s\S]*?)(<\/[^>]+>)$/);
+    const inner = m ? m[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : block.replace(/<[^>]+>/g, ' ').trim();
+    if (!inner) { out.push(block); continue; }
+    const chunks = chunkText(inner);
+    const translatedChunks: string[] = [];
+    for (const chunk of chunks) {
+      const t = await translateWithMyMemory(chunk, target);
+      translatedChunks.push(t || chunk);
+    }
+    const joined = translatedChunks.join(' ');
+    out.push(m ? m[1] + joined + m[3] : joined);
+  }
+  return out.join('');
+}
+
 /** Traduit une liste de textes avec la chaîne de fournisseurs (retourne null si tout échoue). */
 async function translateTexts(texts: string[], langCode: string): Promise<string[] | null> {
   if (texts.length === 0) return [];
@@ -558,14 +595,26 @@ async function translateTexts(texts: string[], langCode: string): Promise<string
   const viaGemini = await translateWithGemini(texts, langName);
   if (viaGemini) return viaGemini;
 
-  // 3. MyMemory (secours sans clé, texte par texte, non-HTML)
-  const out: string[] = [];
-  for (const text of texts) {
-    const plain = text.replace(/<[^>]+>/g, ' ').trim();
-    const translated = plain ? await translateWithMyMemory(plain, langCode) : null;
-    out.push(translated || text);
-  }
-  return out;
+  // 3. MyMemory (secours gratuit, quota journalier limité) :
+  //    - textes longs/HTML découpés proprement, mise en forme conservée
+  //    - appels en parallèle (6 à la fois) pour rester dans les délais
+  //    - 24 textes max par requête : le reste reste en français et sera
+  //      traduit au passage suivant grâce au cache
+  const limited = texts.slice(0, 24);
+  const results = await Promise.all(limited.map(async (text) => {
+    if (!text.trim()) return text;
+    if (/[<>]/.test(text) && text.length > 500) {
+      return (await translateHtmlMyMemory(text, langCode)) || text;
+    }
+    const chunks = chunkText(text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
+    const translated: string[] = [];
+    for (const chunk of chunks) {
+      const t = await translateWithMyMemory(chunk, langCode);
+      translated.push(t || chunk);
+    }
+    return translated.join(' ') || text;
+  }));
+  return [...results, ...texts.slice(24)];
 }
 
 /** Traduit les champs visibles d'une liste d'articles, avec cache en base. */

@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
-import { fr } from 'date-fns/locale';
+
 import type { Article } from '../types';
 import { motion } from 'motion/react';
 import { Key } from 'react';
 import { Play } from 'lucide-react';
 import { FALLBACK_IMAGE, getYouTubeThumb, onImageError } from '../lib/media';
+import { useLang, dateLocale } from '../lib/lang';
 
 interface ArticleCardProps {
   article: Article;
@@ -17,7 +18,8 @@ interface ArticleCardProps {
 }
 
 export default function ArticleCard({ article, featured, categoryName, compact, number }: ArticleCardProps) {
-  const dateStr = formatDistanceToNow(new Date(article.date), { addSuffix: true, locale: fr });
+  const lang = useLang();
+  const dateStr = formatDistanceToNow(new Date(article.date), { addSuffix: true, locale: dateLocale(lang) });
   
   const getYouTubeId = (url?: string) => {
     if (!url) return null;
