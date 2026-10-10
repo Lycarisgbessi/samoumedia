@@ -709,11 +709,27 @@ app.put('/api/articles/:id', authenticateToken, asyncHandler(async (req: any, re
   // pour ne pas casser les liens déjà partagés à chaque sauvegarde
   // (sinon un simple toggle "mis en avant" changeait l'URL de l'article).
   let slug = undefined;
-  if (validData.title) {
-    const current = await prisma.article.findUnique({ where: { id: req.params.id }, select: { title: true } });
-    if (current && current.title !== validData.title) slug = generateSlug(validData.title);
+  let previousStatus: string | undefined;
+  if (validData.title || validData.status) {
+    const current = await prisma.article.findUnique({
+      where: { id: req.params.id },
+      select: { title: true, status: true, slug: true }
+    });
+    if (current) {
+      previousStatus = current.status;
+      if (validData.title && current.title !== validData.title) slug = generateSlug(validData.title);
+    }
   }
   await prisma.article.update({ where: { id: req.params.id }, data: { ...validData, slug } });
+
+  // Notification push quand un article passe à PUBLIÉ (brouillon → publié),
+  // mais pas lors des simples modifications d'un article déjà publié.
+  if (validData.status === 'PUBLISHED' && previousStatus && previousStatus !== 'PUBLISHED') {
+    const fresh = await prisma.article.findUnique({ where: { id: req.params.id }, select: { title: true, slug: true } });
+    if (fresh) {
+      notifyAllSubscribers('SAMOU MÉDIA — Nouvel article', fresh.title, `/article/${fresh.slug}`).catch(() => { });
+    }
+  }
   res.json({ success: true });
 }));
 app.delete('/api/articles/:id', authenticateToken, asyncHandler(async (req: any, res: any) => {
