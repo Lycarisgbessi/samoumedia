@@ -8,6 +8,7 @@ import { compressImage } from '../../utils/imageCompression';
 import { FALLBACK_IMAGE, getYouTubeId, onImageError } from '../../lib/media';
 import { FONT_OPTIONS } from '../../lib/fonts';
 import { useSeoAnalysis } from '../../lib/seo';
+import { apiUrl } from '../../lib/api';
 
 const DRAFT_KEY = 'samou_draft_article';
 
@@ -32,6 +33,17 @@ export default function AdminArticles() {
     currentArticle?.tags || [],
     isEditing
   );
+
+  // Mots-clés RECHERCHÉS par l'audience (assistant SEO)
+  const [audienceSearches, setAudienceSearches] = useState<{ term: string; count: number }[]>([]);
+  useEffect(() => {
+    if (isEditing) {
+      fetch(apiUrl('/api/stats/searches'), { cache: 'no-store' })
+        .then(res => res.json())
+        .then(data => setAudienceSearches(Array.isArray(data) ? data : []))
+        .catch(() => { });
+    }
+  }, [isEditing]);
 
   // Search and Pagination
   const [searchTerm, setSearchTerm] = useState('');
@@ -470,6 +482,42 @@ export default function AdminArticles() {
                     <p className="text-xs text-gray-600">
                       <span className="font-black text-gray-700">Mots accrocheurs détectés :</span> {seo.powerWordsFound.slice(0, 8).join(', ')}
                     </p>
+                  )}
+
+                  {/* Mots-clés réellement recherchés par VOS lecteurs */}
+                  {audienceSearches.length > 0 && (
+                    <div className="pt-2 border-t border-gray-200">
+                      <p className="text-xs font-black text-gray-700 uppercase tracking-wide mb-2">
+                        🔍 Ce que vos lecteurs cherchent sur le site — cliquez pour l'ajouter aux tags
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {audienceSearches.map(s => {
+                          const already = (currentArticle.tags || []).includes(s.term);
+                          return (
+                            <button
+                              type="button"
+                              key={s.term}
+                              onClick={() => {
+                                if (already) return;
+                                setCurrentArticle(prev => ({ ...prev, tags: [...(prev.tags || []), s.term] }));
+                              }}
+                              title={`Recherché ${s.count} fois — ${already ? 'déjà dans vos tags' : 'cliquer pour ajouter aux tags'}`}
+                              className={`px-2.5 py-1 rounded-full text-xs font-bold border transition-colors ${already ? 'bg-green-100 text-green-700 border-green-200' : 'bg-white text-purple-700 border-purple-200 hover:bg-purple-50'}`}
+                            >
+                              {s.term} <span className="opacity-50">×{s.count}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <a
+                        href={`https://trends.google.com/trends/explore?geo=GN&hl=fr&q=${encodeURIComponent((seo.keywords[0]?.word || currentArticle.title || '').split(' ').slice(0, 3).join(' '))}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block mt-2 text-[11px] font-bold text-blue-600 hover:underline"
+                      >
+                        ↗ Vérifier les tendances Google en Guinée pour « {(seo.keywords[0]?.word || 'votre sujet').substring(0, 30)} »
+                      </a>
+                    </div>
                   )}
                 </div>
               </div>

@@ -88,7 +88,7 @@ export default function Header() {
         </Link>
 
         {/* Bannière publicitaire gérée depuis l'admin (Publicités → format Horizontal, emplacement En-tête) */}
-        <div className="hidden lg:flex flex-1 justify-center px-4">
+        <div className="w-full lg:flex-1 flex justify-center px-4 order-last lg:order-none mt-3 lg:mt-0">
           <AdSpace format="horizontal" location="header" />
         </div>
 

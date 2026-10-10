@@ -120,9 +120,7 @@ export default function ChroniqueView() {
         <aside className="w-full lg:w-80 flex-shrink-0 z-10">
           <div className="lg:sticky lg:top-24 space-y-6">
             <AdSpace format="square" className="rounded-xl" />
-            <div className="hidden lg:block">
-              <AdSpace format="vertical" className="rounded-xl h-[300px]" />
-            </div>
+            <AdSpace format="vertical" className="rounded-xl" />
           </div>
         </aside>
       </div>

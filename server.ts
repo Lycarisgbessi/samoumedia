@@ -845,7 +845,8 @@ const trackSchema = z.object({
   path: z.string().optional(),
   adId: z.string().optional(),
   adEvent: z.enum(['impression', 'click']).optional(),
-  referrer: z.string().optional()
+  referrer: z.string().optional(),
+  visitorId: z.string().optional()
 });
 
 app.post('/api/track', asyncHandler(async (req: any, res: any) => {
@@ -862,7 +863,12 @@ app.post('/api/track', asyncHandler(async (req: any, res: any) => {
       articleId = article?.id;
     }
     await prisma.pageView.create({
-      data: { path: data.path.substring(0, 200), articleId, referrer: data.referrer?.substring(0, 300) || null }
+      data: {
+        path: data.path.substring(0, 200),
+        articleId,
+        referrer: data.referrer?.substring(0, 300) || null,
+        visitorId: data.visitorId?.substring(0, 40) || null
+      }
     });
   }
   res.json({ success: true });
@@ -875,7 +881,31 @@ app.get('/api/stats/overview', authenticateToken, asyncHandler(async (req: any, 
       (SELECT COUNT(*) FROM "PageView" WHERE "createdAt" >= CURRENT_DATE)::int AS today,
       (SELECT COUNT(*) FROM "PageView" WHERE "createdAt" >= CURRENT_DATE - INTERVAL '7 days')::int AS week,
       (SELECT COUNT(*) FROM "PageView" WHERE "createdAt" >= CURRENT_DATE - INTERVAL '30 days')::int AS month,
-      (SELECT COUNT(*) FROM "PageView")::int AS total`;
+      (SELECT COUNT(*) FROM "PageView")::int AS total,
+      (SELECT COUNT(DISTINCT "visitorId") FROM "PageView" WHERE "createdAt" >= CURRENT_DATE)::int AS uniquesToday,
+      (SELECT COUNT(DISTINCT "visitorId") FROM "PageView" WHERE "createdAt" >= CURRENT_DATE - INTERVAL '7 days')::int AS uniquesWeek,
+      (SELECT COUNT(DISTINCT "visitorId") FROM "PageView" WHERE "createdAt" >= CURRENT_DATE - INTERVAL '30 days')::int AS uniquesMonth`;
+
+  // Sources d'audience : domaines d'origine des visiteurs (30 jours)
+  const sources = await prisma.$queryRaw<any[]>`
+    SELECT
+      CASE
+        WHEN "referrer" IS NULL OR "referrer" = '' THEN 'Accès direct'
+        WHEN "referrer" LIKE '%facebook.com%' OR "referrer" LIKE '%fb.me%' THEN 'Facebook'
+        WHEN "referrer" LIKE '%whatsapp.com%' THEN 'WhatsApp'
+        WHEN "referrer" LIKE '%twitter.com%' OR "referrer" LIKE '%t.co%' OR "referrer" LIKE '%x.com%' THEN 'X / Twitter'
+        WHEN "referrer" LIKE '%google.%' THEN 'Google'
+        WHEN "referrer" LIKE '%youtube.com%' THEN 'YouTube'
+        WHEN "referrer" LIKE '%linkedin.com%' THEN 'LinkedIn'
+        WHEN "referrer" LIKE '%tiktok.com%' THEN 'TikTok'
+        ELSE split_part(split_part("referrer", '//', 2), '/', 1)
+      END AS source,
+      COUNT(*)::int AS visits
+    FROM "PageView"
+    WHERE "createdAt" >= CURRENT_DATE - INTERVAL '30 days'
+    GROUP BY 1
+    ORDER BY visits DESC
+    LIMIT 6`;
 
   const byDay = await prisma.$queryRaw<any[]>`
     SELECT to_char("createdAt", 'YYYY-MM-DD') AS day, COUNT(*)::int AS count
@@ -932,7 +962,16 @@ app.get('/api/stats/overview', authenticateToken, asyncHandler(async (req: any, 
     pushSubscribers: await prisma.pushSubscription.count()
   };
 
-  res.json({ ...totals, byDay, heat, topArticles, ads, topSearches, counts });
+  res.json({ ...totals, sources, byDay, heat, topArticles, ads, topSearches, counts });
+}));
+
+// Termes recherchés par l'audience — utilisés par l'assistant SEO de l'éditeur.
+// (Public et non sensible : uniquement des mots-clés anonymisés.)
+app.get('/api/stats/searches', asyncHandler(async (req: any, res: any) => {
+  const terms = await prisma.searchTerm.findMany({
+    orderBy: [{ count: 'desc' }], take: 10, select: { term: true, count: true }
+  });
+  res.json(terms);
 }));
 
 if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
@@ -944,7 +983,31 @@ if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
 } else {
   const distPath = path.join(process.cwd(), 'dist');
   app.use(express.static(distPath, { index: false }));
-  
+
+  // ─── SEO : robots.txt + sitemap.xml dynamiques ───────────────
+  const SITE_ORIGIN = process.env.SITE_URL || 'https://www.samoumedia.com';
+
+  app.get('/robots.txt', (req, res) => {
+    res.type('text/plain').send(
+      `User-agent: *\nAllow: /\nDisallow: /admin\n\nSitemap: ${SITE_ORIGIN}/sitemap.xml\n`
+    );
+  });
+
+  app.get('/sitemap.xml', asyncHandler(async (req: any, res: any) => {
+    const articles = await prisma.article.findMany({
+      where: { isDeleted: false, status: 'PUBLISHED' },
+      select: { slug: true, date: true },
+      orderBy: { date: 'desc' },
+      take: 1000
+    });
+    const staticPages = ['', '/rubriques', '/podcasts', '/reportages', '/contact', '/about', '/recherche'];
+    const urls = [
+      ...staticPages.map(p => `  <url><loc>${SITE_ORIGIN}${p}</loc><changefreq>${p === '' ? 'hourly' : 'weekly'}</changefreq><priority>${p === '' ? '1.0' : '0.7'}</priority></url>`),
+      ...articles.map(a => `  <url><loc>${SITE_ORIGIN}/article/${a.slug}</loc><lastmod>${a.date.toISOString()}</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>`)
+    ];
+    res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>`);
+  }));
+
   app.get('*', asyncHandler(async (req: any, res: any) => {
     // Anti-cache : oblige le navigateur à revalider le HTML à chaque visite.
     // Sans cet en-tête, les téléphones gardent l'ancienne page (et ses vieux
@@ -954,12 +1017,13 @@ if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
     let html = fs.readFileSync(path.join(distPath, 'index.html'), 'utf8');
     const config = await prisma.siteConfig.findUnique({ where: { id: 1 } });
     const siteName = config?.name || 'SAMOU MÉDIA';
-    
+
     let title = siteName;
     let description = config?.slogan || 'Information en continu';
     let image = '';
     let isDraft = false;
-    
+    let jsonLd = '';
+
     if (req.path.startsWith('/article/')) {
       const slug = req.path.split('/')[2];
       const article = await prisma.article.findUnique({ where: { slug } });
@@ -968,22 +1032,63 @@ if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
         description = (article.excerpt || article.title).replace(/"/g, '&quot;');
         image = article.imageUrl || '';
         if (article.status === 'DRAFT') isDraft = true;
+
+        // Données structurées NewsArticle (Google Actualités / résultats enrichis)
+        const clean = (s: string) => (s || '').replace(/<[^>]+>/g, ' ').replace(/"/g, '&quot;').replace(/\s+/g, ' ').trim();
+        jsonLd = JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'NewsArticle',
+          headline: clean(article.title).substring(0, 110),
+          description: clean(article.excerpt || '').substring(0, 200),
+          image: image ? [image] : undefined,
+          datePublished: article.date instanceof Date ? article.date.toISOString() : String(article.date),
+          dateModified: article.updatedAt instanceof Date ? article.updatedAt.toISOString() : String(article.updatedAt),
+          author: { '@type': 'Organization', name: article.author || siteName },
+          publisher: {
+            '@type': 'NewsMediaOrganization',
+            name: siteName,
+            logo: { '@type': 'ImageObject', url: `${SITE_ORIGIN}/icons/icon-512.png` }
+          },
+          mainEntityOfPage: { '@type': 'WebPage', '@id': `${SITE_ORIGIN}/article/${article.slug}` },
+          inLanguage: 'fr'
+        }).replace(/</g, '\\u003c');
       }
+    } else if (req.path === '/' || req.path === '') {
+      // Données structurées du média (page d'accueil)
+      jsonLd = JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'NewsMediaOrganization',
+        name: siteName,
+        slogan: config?.slogan || undefined,
+        url: SITE_ORIGIN,
+        logo: `${SITE_ORIGIN}/icons/icon-512.png`,
+        telephone: config?.phone || undefined,
+        email: (config?.emails || [])[0],
+        address: config?.address ? { '@type': 'PostalAddress', streetAddress: config.address, addressCountry: 'GN' } : undefined
+      }).replace(/</g, '\\u003c');
     }
-    
+
+    const canonical = `${SITE_ORIGIN}${req.path === '/' ? '' : req.path}`;
+    const ogType = req.path.startsWith('/article/') ? 'article' : 'website';
+
     const metaTags = `
     <title>${title}</title>
     ${isDraft ? '<meta name="robots" content="noindex" />' : ''}
+    <link rel="canonical" href="${canonical}" />
     <meta name="description" content="${description}" />
     <meta property="og:title" content="${title}" />
     <meta property="og:description" content="${description}" />
     <meta property="og:image" content="${image}" />
-    <meta property="og:type" content="website" />
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:title" content="${title}" />
-    <meta property="twitter:description" content="${description}" />
-    <meta property="twitter:image" content="${image}" />`;
-    
+    <meta property="og:type" content="${ogType}" />
+    <meta property="og:url" content="${canonical}" />
+    <meta property="og:site_name" content="${siteName}" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${title}" />
+    <meta name="twitter:description" content="${description}" />
+    <meta name="twitter:image" content="${image}" />
+    ${jsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ''}`;
+
     // On retire d'abord les métadonnées par défaut du index.html statique,
     // puis on injecte celles de l'article (sinon balises description/og dupliquées).
     html = html

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Eye, EyeOff, TrendingUp, Search, Bell, FileText, Send, MousePointerClick, Flame } from 'lucide-react';
+import { Eye, EyeOff, TrendingUp, Search, Bell, FileText, Send, MousePointerClick, Flame, Globe } from 'lucide-react';
 import { authFetch } from '../../lib/auth';
 
 const DAYS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
@@ -19,18 +19,27 @@ export default function AdminDashboard() {
   if (!data) return <div>Chargement des statistiques...</div>;
 
   const kpis = [
-    { label: 'Visites aujourd\'hui', value: (data.today || 0).toLocaleString('fr-FR'), icon: Eye, color: 'bg-brand-red' },
-    { label: 'Visites 7 jours', value: (data.week || 0).toLocaleString('fr-FR'), icon: TrendingUp, color: 'bg-blue-600' },
-    { label: 'Visites 30 jours', value: (data.month || 0).toLocaleString('fr-FR'), icon: EyeOff, color: 'bg-brand-green' },
+    { label: 'Visites aujourd\'hui', value: (data.today || 0).toLocaleString('fr-FR'), sub: `${data.uniquesToday || 0} visiteur(s) unique(s)`, icon: Eye, color: 'bg-brand-red' },
+    { label: 'Visites 7 jours', value: (data.week || 0).toLocaleString('fr-FR'), sub: `${data.uniquesWeek || 0} unique(s)`, icon: TrendingUp, color: 'bg-blue-600' },
+    { label: 'Visites 30 jours', value: (data.month || 0).toLocaleString('fr-FR'), sub: `${data.uniquesMonth || 0} unique(s)`, icon: EyeOff, color: 'bg-brand-green' },
     { label: 'Visites totales', value: (data.total || 0).toLocaleString('fr-FR'), icon: EyeOff, color: 'bg-gray-800' },
     { label: 'Articles publiés', value: `${data.counts?.published || 0} / ${data.counts?.articles || 0}`, icon: FileText, color: 'bg-purple-600' },
     { label: 'Abonnés newsletter', value: data.counts?.subscribers || 0, icon: Send, color: 'bg-brand-yellow !text-gray-900' },
     { label: 'Abonnés notifications', value: data.counts?.pushSubscribers || 0, icon: Bell, color: 'bg-orange-500' },
   ];
 
-  // Graphique : vues par jour (14 derniers jours)
-  const byDay: { day: string; count: number }[] = data.byDay || [];
+  // Graphique : vues par jour (14 derniers jours) — jours sans données = 0
+  const byDayRaw: { day: string; count: number }[] = data.byDay || [];
+  const byDayMap = new Map(byDayRaw.map(d => [d.day, d.count]));
+  const byDay: { day: string; count: number }[] = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().substring(0, 10);
+    byDay.push({ day: key, count: byDayMap.get(key) || 0 });
+  }
   const maxDay = Math.max(1, ...byDay.map(d => d.count));
+  const sources: { source: string; visits: number }[] = data.sources || [];
 
   // Heat map : 7 jours × 24 heures
   const heat: { dow: number; hour: number; count: number }[] = data.heat || [];
@@ -60,6 +69,7 @@ export default function AdminDashboard() {
               </div>
               <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide leading-tight mb-0.5">{kpi.label}</p>
               <p className="text-xl font-black text-gray-900">{kpi.value}</p>
+              {kpi.sub && <p className="text-[10px] text-gray-400 font-bold">{kpi.sub}</p>}
             </div>
           );
         })}
@@ -190,6 +200,27 @@ export default function AdminDashboard() {
                 ))}
               </tbody>
             </table>
+          )}
+        </div>
+
+        {/* Sources d'audience */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <h2 className="font-bold text-gray-900 mb-1 flex items-center gap-2"><Globe size={18} className="text-blue-500" /> D'où viennent vos visiteurs (30 jours)</h2>
+          <p className="text-xs text-gray-400 mb-4">Sites et applications qui ont mené au vôtre</p>
+          {sources.length === 0 ? (
+            <p className="text-sm text-gray-400 py-6 text-center">Pas encore de données de provenance.</p>
+          ) : (
+            <div className="space-y-2.5">
+              {sources.map(s => (
+                <div key={s.source} className="flex items-center gap-3">
+                  <span className="text-sm font-bold text-gray-800 w-28 shrink-0 truncate" title={s.source}>{s.source}</span>
+                  <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${(s.visits / Math.max(...sources.map(x => x.visits))) * 100}%` }} />
+                  </div>
+                  <span className="text-xs font-black text-gray-500 shrink-0">{s.visits}</span>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 

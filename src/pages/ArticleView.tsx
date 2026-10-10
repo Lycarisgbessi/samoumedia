@@ -117,7 +117,7 @@ export default function ArticleView() {
       <div className="max-w-7xl mx-auto px-4 py-8 md:py-16 flex flex-col lg:flex-row gap-8 md:gap-12">
         <div className="flex-1 max-w-4xl">
           <Reveal delay={0.3}>
-            <div className="hidden md:block mb-10">
+            <div className="mb-10">
               <AdSpace format="horizontal" className="rounded-xl h-24" />
             </div>
 
@@ -206,10 +206,7 @@ export default function ArticleView() {
         <aside className="w-full lg:w-80 flex-shrink-0 z-10">
           <div className="lg:sticky lg:top-24 space-y-6">
             <AdSpace format="square" className="rounded-xl" />
-            {/* La très grande bannière verticale n'est affichée que sur ordinateur */}
-            <div className="hidden lg:block">
-              <AdSpace format="vertical" className="rounded-xl h-[300px]" />
-            </div>
+            <AdSpace format="vertical" className="rounded-xl" />
           </div>
         </aside>
       </div>
