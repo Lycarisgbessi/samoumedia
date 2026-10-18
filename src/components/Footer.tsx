@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Facebook, Twitter, Youtube, MapPin, Mail, Phone } from 'lucide-react';
+import { Facebook, Twitter, Youtube, MapPin, Mail, Phone, Heart } from 'lucide-react';
 import { useCategories, useConfig } from '../lib/hooks';
 import { PwaButtons } from './PwaButtons';
 import { apiUrl } from '../lib/api';
@@ -141,9 +141,20 @@ export default function Footer() {
       </div>
 
       {/* Copyright */}
-      <div className="max-w-7xl mx-auto px-4 pt-6 border-t border-gray-200 text-xs text-gray-500 flex flex-col md:flex-row justify-between items-center font-medium">
+      <div className="max-w-7xl mx-auto px-4 pt-6 border-t border-gray-200 text-xs text-gray-500 flex flex-col md:flex-row justify-between items-center gap-2 font-medium">
         <p>© {new Date().getFullYear()} SAMOU MÉDIA - Tous droits réservés.</p>
-        <p className="mt-2 md:mt-0">Conçu avec ❤️ en Guinée</p>
+        <p className="flex items-center gap-1.5">
+          Conçu avec <Heart size={12} className="text-brand-red fill-brand-red" /> en Guinée par
+          <a
+            href="https://www.einsofdigit.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="EINSOF DIGIT — Conception de sites web"
+            className="font-black text-gray-700 hover:text-brand-red transition-colors"
+          >
+            EINSOF&nbsp;DIGIT
+          </a>
+        </p>
       </div>
     </footer>
   );
